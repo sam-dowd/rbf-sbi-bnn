@@ -7,7 +7,13 @@
 \usepackage{xcolor}
 \usepackage[margin=1in]{geometry}
 \usepackage[square,numbers,sort&compress]{natbib}
+\usepackage{array}
+\newcolumntype{H}{@{}>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
+\usepackage{adjustbox}
+\usepackage[section]{placeins}
 \usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor={blue!55!black}, citecolor={green!35!black}, urlcolor={blue!55!black}}
+\makeatletter\setlength{\@fptop}{0pt}\setlength{\@fpsep}{14pt plus 2fil}\setlength{\@fpbot}{0pt plus 1fil}\makeatother
 \setlength{\parskip}{0.35em}
 \setlength{\parindent}{0pt}
 \newcommand{\nzo}{\mathcal{N}(0,1)}
@@ -18,7 +24,7 @@
 \newcommand{\secTBD}{{\color{red}*}}
 \newcommand{\threecols}{ & $n=50$ & $n=100$ & $n=10{,}000$ \\}
 \newcommand{\pc}[2]{\begin{tabular}[c]{@{}c@{}}#1\\[-2pt]{\scriptsize #2}\end{tabular}}  % paired-test cell (Appendix tables)   % section number to fill in once Results is revised (2026-11-05)
-\newcommand{\repro}[1]{\par{\color{gray}\footnotesize\textbf{Reproduce:} #1}\par}
+\newcommand{\repro}[1]{\par{\raggedright\color{gray}\footnotesize\textbf{Reproduce:} #1\par}}
 
 \begin{document}
 \sloppy
@@ -232,8 +238,9 @@ tempered versions at temperature $T>0$:
 \begin{align}
 \text{fully tempered:}\quad & p_{F}(\mathbf w\mid\mathcal{D})\propto\exp\!\big(-U(\mathbf w)/T\big)
   =p(\mathcal{D}\mid\mathbf w)^{1/T}\,p(\mathbf w)^{1/T},\\
-\text{partially (likelihood-) tempered:}\quad & p_{P}(\mathbf w\mid\mathcal{D})\propto p(\mathcal{D}\mid\mathbf w)^{1/T}\,p(\mathbf w)
-  =\exp\!\Big(\log p(\mathbf w)+\tfrac1T\textstyle\sum_i\log p(y_i\mid x_i,\mathbf w)\Big).
+\text{partially tempered:}\quad & p_{P}(\mathbf w\mid\mathcal{D})\propto p(\mathcal{D}\mid\mathbf w)^{1/T}\,p(\mathbf w)
+  \notag\\
+& \phantom{p_{P}(\mathbf w\mid\mathcal{D})}=\exp\!\Big(\log p(\mathbf w)+\tfrac1T\textstyle\sum_i\log p(y_i\mid x_i,\mathbf w)\Big).
   \label{eq:partial}
 \end{align}
 $T=1$ is the Bayes posterior and $T<1$ a ``cold'' posterior. A cold posterior sharpens the Bayes posterior,
@@ -1072,6 +1079,10 @@ decreasing-step updates and a hyperprior, or the coherence condition as a prior 
 repeats and test datasets jointly, for intervals that include test-set uncertainty. (vi) Larger fields: the same
 simulator on two- and three-dimensional grids (Section~\ref{sec:why_task}), toward cosmological field-level inference.
 
+\bibliographystyle{unsrtnat}
+\bibliography{paper}
+
+\clearpage
 \appendix
 \section{Further results on the final runs}
 \label{app:final}
@@ -1096,12 +1107,12 @@ test datasets with $|z|>3$ (\%) & \multicolumn{2}{c}{0.9} \\
 \end{tabular}
 \caption{Each metric evaluated for the exact posterior (1{,}000 test datasets). Mean error, width error and the
 warranted-width ratio are 0, 0 and 1 by construction. The TARP values (1{,}000 grid-posterior draws) are the Monte Carlo floor of
-the test;}
+the test.}
 \label{tab:exactfloor}
 \end{table}
- \code{python paper/scripts/appendix\_tables.py} (paired
+\repro{tables of this appendix: \code{python paper/scripts/appendix\_tables.py} (paired
 differences, NPE variants, moment and TARP tables) and \code{paper/scripts/section6.py} (verdict, decomposition and width
-tables, TARP figure); both read \code{results/raw/final} and fit nothing (Appendix~\ref{app:repro}).
+tables, TARP figure); both read \code{results/raw/final} and fit nothing (Appendix~\ref{app:repro}).}
 
 \subsection{Paired differences}
 \label{app:paired}
@@ -1231,7 +1242,7 @@ which can represent the skew of $\sigma$'s posterior (Section~\ref{sec:why_task}
 
 \begin{table}[h]
 \centering
-\small\setlength{\tabcolsep}{4pt}
+\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{lccc}
 \toprule
 \threecols
@@ -1450,6 +1461,7 @@ Bayes 1, 6 and 1;
 every fit of the other models used all 12 members.
 
 \section{Reproducibility}
+\begingroup\raggedright
 \label{app:repro}
 \textbf{Code.} The code of this report is at \url{https://github.com/sam-dowd/rbf-sbi-bnn}; all paths below are relative
 to it. It holds the library (\code{src/rbf\_sbi/}: simulator and exact posterior, the BNN, NPE, evaluation and
@@ -1489,24 +1501,23 @@ variants are refits with their own scripts (Table~\ref{tab:repro}), which read a
 hyperparameters of the corresponding default run.
 
 \begin{table}[h]
-\centering\footnotesize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lll}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}>{\raggedright}p{2.35cm}l>{\raggedright\arraybackslash}p{6.4cm}@{}}
 \toprule
 model & result key & fitting call \\
 \midrule
 BNN, $\nzo$ & \code{final\_bnn\_stdnormal\_pretuned} & \code{bnn.fit\_correlated}; also writes the capped Gaussian predictor \\
 BNN, data-free scale & \code{final\_bnn\_gaussprior\_pretuned} & \code{fit\_correlated}, prior $\mathcal N(0,0.3655^2)$ \\
 BNN, tempered & \code{final\_bnn\_temp\_pretuned} & \code{fit\_correlated(temperature=T)}, $T$ from the search of Appendix~\ref{app:temp_search} \\
-$\nzo$ + re-tune & \code{final\_bnn\_stdnormal\_retune\_pretuned} & \code{bnn.fit\_rasmussen\_gibbs\_hierarchical(resample\_tau=False)} \\
-empirical Bayes & \code{final\_bnn\_ebblock\_pretuned} & \code{fit\_rasmussen\_gibbs\_hierarchical(resample\_tau=False, eb\_block="iso")} \\
+$\nzo$ + re-tune & \code{final\_bnn\_stdnormal\_retune\_pretuned} & \code{bnn.fit\_rasmussen\_gibbs\_hierarchical(}\newline\code{\ \ resample\_tau=False)} \\
+empirical Bayes & \code{final\_bnn\_ebblock\_pretuned} & \code{fit\_rasmussen\_gibbs\_hierarchical(}\newline\code{\ \ resample\_tau=False, eb\_block="iso")} \\
 Gaussian predictor, capped & \code{final\_bnn\_pretrained\{\_ens12,\}\_pretuned} & the $\nzo$ BNN's pretrained networks, scored unsampled \\
-Gaussian predictor, converged & \code{final\_bnn\_pretrained\{\_ens12,\}\_pretuned\_long} & \code{scripts/fit/gaussian\_predictor\_long.py} (\code{bnn.fit\_pretrained\_ensemble}) \\
+Gaussian predictor, converged & \code{final\_bnn\_pretrained\{\_ens12,\}\_pretuned\_long} & \code{scripts/fit/gaussian\_predictor\_long.py}\newline(\code{bnn.fit\_pretrained\_ensemble}) \\
 NPE, 12 flows / 1 flow & \code{final\_npe\_ens12} / \code{final\_npe} & \code{npe.fit}, 12 member seeds \\
-NPE, long-trained & \code{final\_npe\_ens12\_long} & \code{scripts/fit/npe\_long\_members.py}, merged by \code{scripts/fit/npe\_long\_merge.py} \\
-NPE variants & \code{final\_npe\{\_ctx16,\_gauss\_ctx16\}\{\_ens12,\}} & \code{scripts/fit/npe\_variant\_members.py}, merged by \code{scripts/fit/npe\_variant\_merge.py} \\
+NPE, long-trained & \code{final\_npe\_ens12\_long} & \code{scripts/fit/npe\_long\_members.py},\newline merged by \code{scripts/fit/npe\_long\_merge.py} \\
+NPE variants & \code{final\_npe\{\_ctx16,\_gauss\_ctx16\}\{\_ens12,\}} & \code{scripts/fit/npe\_variant\_members.py},\newline merged by \code{scripts/fit/npe\_variant\_merge.py} \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \caption{One row per reported model of the final runs; functions are in \code{src/rbf\_sbi/}. Hyperparameters:
 Section~\ref{sec:hp} and Appendix~\ref{app:hp}. The earlier runs of Appendix~\ref{app:variants} use the sweep keys listed
 in \code{scripts/fit/run\_experiment.py}'s module docstring; their result files are not released, and the code behind
@@ -1538,6 +1549,7 @@ simulation-free check \code{scripts/tuning/coherence\_width\_check.py}. All of t
 \item Appendix~\ref{app:variants} (earlier runs): \code{legacy/results4\_\{scale,shape,side\}.py}.
 \end{itemize}
 
+\par\endgroup
 \section{Hyperparameters and compute}
 \label{app:hp}
 \textbf{Hyperparameter search} (summary in Section~\ref{sec:hp}). Apart from the learning rate and weight decay, all
@@ -1584,9 +1596,8 @@ member; $K=12$ members; up to 3 re-seeded attempts to replace non-finite members
 predictor and NPE: Sections~\ref{sec:gauss} and~\ref{sec:npe}.
 
 \begin{table}[h]
-\centering\footnotesize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llllll}
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright}p{2.4cm}>{\raggedright}p{2.3cm}l>{\raggedright}p{2.8cm}>{\raggedright}p{1.9cm}>{\raggedright\arraybackslash}p{2.6cm}@{}}
 \toprule
 model & prior & $T$ & sampling loop & steps / kept per member & wall time per fit \\
 \midrule
@@ -1598,7 +1609,7 @@ empirical Bayes & $\mathcal N(0,\tau^2)$, block update & 1 & re-tune loop & 12{,
 Gaussian predictor, converged & -- & -- & AdamW, $\le200{,}000$ steps & -- & 24--82\,s \\
 NPE, 12 flows & -- & -- & Adam, $\le20{,}000$ steps & -- & 157--238\,s ($n\le1{,}000$); 663--907\,s ($n\ge5{,}000$) \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \caption{Per-model settings and wall time per fit (one training set, all 12 members, fitting and prediction; median per
 size, range over sizes) of the final runs, on one NVIDIA A100 (Section~\ref{sec:compute}). BNN and Gaussian-predictor
 times are recorded in each result file; NPE times are job wall times from the run log (not included in the repository) divided by the
@@ -1636,14 +1647,15 @@ ring: the chosen $T$. Open markers: max split-$\widehat R$ on the predicted mean
 (poorly mixed; at $n=100$, $T=0.9$ is flagged by one repeat at 1.53). Means above the panel are written at its top
 edge; repeats above it are not drawn (all three at $n=500$, $T=0.4$; two of three at $n=500$, $T=0.5$); every other
 value is in range. Only the evaluated temperatures are shown (bisection, 5 of 9 grid points per size). Each panel has
-its own vertical scale. The title gives the mean gain of the chosen $T$ over $T=1$ on validation.}
+its own vertical scale. Each panel's title gives the chosen $T$ and its mean gain over $T=1$ on validation.}
 \label{fig:temperature_search}
 \end{figure}
 \repro{search \code{scripts/tuning/optimize\_temperature\_grid.py} $\to$
-\code{results/temperature\_search\_n\{50,100,500,1000\}\_stdprior\_pretuned\_grid.npz}; figure
+\code{results/temperature\_search\_n<n>\_stdprior\_pretuned\_grid.npz} ($n=50$, 100, 500, 1{,}000); figure
 \code{python paper/scripts/temperature\_search\_plot.py}.}
 
 \section{Implementation of the correlated \texttt{bde} model}
+\begingroup\raggedright
 \label{app:bde}
 \label{app:impl}
 \textbf{Departures from stock \code{bde}}, all subclass overrides in \code{src/rbf\_sbi/bnn.py} (installed package unmodified):
@@ -1704,6 +1716,7 @@ factor), member-by-member prediction (\code{\_predict\_raw\_per\_member}, identi
 memory), and the re-tune loop \code{fit\_rasmussen\_gibbs\_hierarchical}, which runs its own MCLMC chain on the same
 log-posterior. All rely on undocumented \code{bde} internals and are tied to version 1.0.2.
 
+\par\endgroup
 \section{Background details}
 \label{app:bg}
 \subsection{Microcanonical Langevin Monte Carlo}
@@ -1875,17 +1888,31 @@ $(L,\epsilon)$ are re-tuned. All kept draws are retained, including those of ear
 Paired with $\mathcal{N}(0,1)$ plus the same re-tune.
 
 \begin{table}[h]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{r|cccc|cccc|c}
+\centering\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{rccccHHHHH}
 \toprule
- & \multicolumn{4}{c|}{data-free width vs.\ $\mathcal{N}(0,1)$ (stock MILE)} & \multicolumn{4}{c|}{empirical Bayes vs.\ $\mathcal{N}(0,1)$ + re-tune} & EB scale \\
-$n$ & test NLL & paired & width / warranted & RMS aleatoric & test NLL & paired & width / warranted & RMS aleatoric & median \\
- & & difference & $\sigma$/$\rho$ & $\sigma$/$\rho$ & & difference & $\sigma$/$\rho$ & $\sigma$/$\rho$ & (at floor) \\
+\multicolumn{5}{l}{\textit{(a) data-free width vs.\ $\mathcal{N}(0,1)$ (stock MILE)}} &&&&& \\
+$n$ & test NLL & paired & width / warranted & RMS aleatoric &&&&& \\
+ & & difference & $\sigma$/$\rho$ & $\sigma$/$\rho$ &&&&& \\
 \midrule
 \inputrows{tables/results4_scale.tex}
 \bottomrule
-\end{tabular}}
+\end{tabular}
+\end{adjustbox}
+
+\vspace{0.8em}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{rHHHH>{\hspace{2\tabcolsep}}ccccc}
+\toprule
+\multicolumn{10}{l}{\textit{(b) empirical Bayes vs.\ $\mathcal{N}(0,1)$ + re-tune}} \\
+$n$ &&&&& test NLL & paired & width / warranted & RMS aleatoric & EB scale \\
+ &&&&& & difference & $\sigma$/$\rho$ & $\sigma$/$\rho$ & median (at floor) \\
+\midrule
+\inputrows{tables/results4_scale.tex}
+\bottomrule
+\end{tabular}
+\end{adjustbox}
 \caption{Prior-scale models against their controls ($\to$: control, then model; means over 5 repeats). Paired difference: model
 minus control ($k$/5: model better). Bold: the better of each pair (both if within the sd of their paired difference); width
 / warranted closer to 1, RMS aleatoric closer to the exact sd (0.153 / 0.054). EB scale: median final scale over 15 members
@@ -2212,7 +2239,5 @@ re-tune of Section~\ref{sec:impl} re-estimates both every 1{,}000 steps.
   (Section~\ref{sec:convdiag}).
 \end{itemize}
 
-\bibliographystyle{unsrtnat}
-\bibliography{paper}
 
 \end{document}

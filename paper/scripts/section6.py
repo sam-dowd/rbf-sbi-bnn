@@ -94,8 +94,8 @@ def panel(ax, vals, groups, sizes, title, ylim, exact=True):
         for n, mi, si in zip(ns, m, s):   # off-scale means are written, not drawn
             if mi > ylim[1]:
                 ax.annotate(f"{mt(lab)}: ${mi:+.2f}\\pm{si:.2f}$",
-                            (n, ylim[1]), xytext=(4, -10 - 10 * labs.index(lab) % 30), textcoords="offset points",
-                            fontsize=7, color=INK2, arrowprops=dict(arrowstyle="-|>", color=col, lw=0.8))
+                            (n, ylim[1]), xytext=(16, -6 - (10 * labs.index(lab)) % 30), textcoords="offset points",
+                            fontsize=7, color=INK2, ha="left", va="top", arrowprops=dict(arrowstyle="-|>", color=col, lw=0.8))
     if exact:
         ax.axhline(EXACT_NLL, color=MUTED, linestyle=":", linewidth=1.0)
         ax.annotate("exact posterior", (sizes[0], EXACT_NLL), xytext=(2, 3), textcoords="offset points",
@@ -103,7 +103,8 @@ def panel(ax, vals, groups, sizes, title, ylim, exact=True):
     ax.set_ylim(*ylim)
     ax.set_xscale("log")
     ax.set_xticks(sizes)
-    ax.set_xticklabels([f"{n:,}" for n in sizes])
+    # thousands as "k" on the full-range panel: 5,000 and 10,000 collide on a log axis
+    ax.set_xticklabels([f"{n // 1000}k" if n >= 1000 and max(sizes) > 1000 else f"{n:,}" for n in sizes])
     ax.minorticks_off()
     ax.set_xlabel("training size $n$")
     ax.set_ylabel("test NLL (nats; lower is better)")

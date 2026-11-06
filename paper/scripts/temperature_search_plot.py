@@ -72,8 +72,6 @@ def panel(ax, n, s):
         ax.scatter([T], [m], s=40, zorder=4, color="white" if b else BNN, edgecolors=BNN, linewidths=1.6)
     ib = int(np.argmin(np.abs(s["T"] - s["best"])))
     ax.scatter([s["best"]], [s["mean"][ib]], s=150, facecolors="none", edgecolors=INK, linewidths=1.0, zorder=5)
-    ax.annotate(f"chosen $T={s['best']:.1f}$", (s["best"], s["mean"][ib]), xytext=(0, -14),
-                textcoords="offset points", ha="center", va="top", fontsize=7.5, color=INK2)
     # off-scale means: one label per T at the top edge, staggered so neighbouring labels do not collide
     # (off-scale individual repeats are not drawn; the caption says so)
     off = [(t, v) for t, v in over if t in s["T"][s["mean"] > yhi] and v in s["mean"]]
@@ -82,7 +80,7 @@ def panel(ax, n, s):
                     xytext=(0, -2 - 9 * (k % 2)), textcoords="offset points", ha="center", va="top",
                     fontsize=6.5, color=INK2)
     gain = s["t1"] - s["mean"][ib]
-    ax.set_title(f"$n={n:,}$   (gain over $T=1$: {gain:.2f} nats)", loc="left")
+    ax.set_title(f"$n={n:,}$: chosen $T={s['best']:.1f}$, gain over $T=1$: {gain:.2f} nats", loc="left")
     ax.set_xlim(0.15, 1.05)
     ax.set_xticks(np.round(np.arange(0.2, 1.01, 0.1), 1))
     ax.set_xticklabels([f"{t:.1f}" if i % 2 == 0 else "" for i, t in enumerate(np.arange(0.2, 1.01, 0.1))])
@@ -91,8 +89,8 @@ def panel(ax, n, s):
 
 def main():
     FIG.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 4, figsize=(11.0, 3.0))
-    for ax, n in zip(axes, SIZES):
+    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.4))
+    for ax, n in zip(axes.flat, SIZES):
         s = load(n)
         bad = (s["rhat"] > RHAT_BAD).any(axis=1)
         print(f"n={n:5d} members={s['members']} chosen T={s['best']:.1f} T=1 {s['t1']:+.3f}")
@@ -100,7 +98,8 @@ def main():
             print(f"   T={T:.1f} mean {m:+9.3f}  repeats {np.array2string(r, precision=3)}  "
                   f"rhat_max {np.array2string(rh, precision=2)}{'  POORLY MIXED' if b else ''}")
         panel(ax, n, s)
-    axes[0].set_ylabel("validation NLL (nats; lower is better)")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("validation NLL (nats; lower is better)")
     out = FIG / "temperature_search.pdf"
     fig.tight_layout()
     fig.savefig(out)

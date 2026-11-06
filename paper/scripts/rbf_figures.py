@@ -129,7 +129,7 @@ def main():
     for ax, x, prior_sd, lab in ((axes[0], sd[:, 0], data.SIGMA_STD, r"posterior std of $\sigma$"),
                                  (axes[1], sd[:, 1], data.RHO_STD, r"posterior std of $\rho$")):
         ax.hist(x, bins=40, color=BLUE, edgecolor="white", linewidth=0.5)
-        ax.axvline(prior_sd, color=INK2, lw=1, ls="--"); ax.text(prior_sd, ax.get_ylim()[1] * 0.92, " prior", color=INK2, fontsize=7)
+        ax.axvline(prior_sd, color=INK2, lw=1, ls="--"); ax.text(prior_sd, ax.get_ylim()[1] * 0.92, "prior ", color=INK2, fontsize=7, ha="right")
         ax.set_xlabel(lab); ax.set_xlim(0, prior_sd * 1.1)
     axes[0].set_ylabel("test datasets")
     axes[2].hist(corr, bins=40, color=BLUE, edgecolor="white", linewidth=0.5)
