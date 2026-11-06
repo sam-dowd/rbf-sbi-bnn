@@ -1,0 +1,16 @@
+# Exact versions used for the paper (Python 3.11, NERSC Perlmutter, NVIDIA A100, CUDA 12 wheels).
+# sklearn-contrib-bde pins blackjax==1.2.2; src/rbf_sbi/bnn.py overrides undocumented bde internals, so keep bde at 1.0.2.
+jax[cuda12]==0.10.2
+jaxlib==0.10.2
+flax==0.12.8
+optax==0.2.8
+sklearn-contrib-bde==1.0.2
+blackjax==1.2.2
+torch==2.13.0
+nflows==0.14
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.0
+scikit-optimize==0.10.2
+matplotlib==3.11.1
+tqdm==4.70.0

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+logs/
+scratch/
+results/raw/
+data/reference_posterior/
+.built_by_build_release
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.toc
+paper/*.out

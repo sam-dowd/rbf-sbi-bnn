@@ -1,0 +1,42 @@
+\multicolumn{7}{l}{\textbf{$\sigma$}} \\
+\midrule
+\multicolumn{7}{l}{\emph{Sampled BNN}} \\
+BNN, $\mathcal N(0,1)$ & $0.143\pm0.013$ & $0.124\pm0.010$ & $0.084\pm0.006$ & $0.067\pm0.002$ & {\boldmath$0.032\pm0.002$} & {\boldmath$0.025\pm0.001$} \\
+BNN, data-free scale & $0.145\pm0.012$ & $0.127\pm0.008$ & $0.088\pm0.004$ & $0.070\pm0.001$ & $0.035\pm0.002$ & $0.026\pm0.000$ \\
+BNN, tempered & $0.142\pm0.015$ & $0.119\pm0.011$ & {\boldmath$0.074\pm0.005$} & {\boldmath$0.062\pm0.005$} & -- & -- \\
+\midrule
+\multicolumn{7}{l}{\emph{BNN without sampling}} \\
+Gaussian predictor, 12 nets, capped & $0.167\pm0.021$ & $0.127\pm0.011$ & $0.090\pm0.003$ & $0.081\pm0.002$ & $0.055\pm0.001$ & $0.055\pm0.001$ \\
+Gaussian predictor, 12 nets, converged & $0.159\pm0.023$ & $0.127\pm0.011$ & $0.087\pm0.002$ & $0.072\pm0.003$ & $0.043\pm0.001$ & $0.037\pm0.001$ \\
+Gaussian predictor, 1 net, capped & $0.166\pm0.022$ & $0.134\pm0.017$ & $0.094\pm0.005$ & $0.082\pm0.005$ & $0.062\pm0.005$ & $0.055\pm0.002$ \\
+Gaussian predictor, 1 net, converged & $0.160\pm0.024$ & $0.134\pm0.017$ & $0.092\pm0.005$ & $0.077\pm0.004$ & $0.050\pm0.003$ & $0.043\pm0.001$ \\
+\midrule
+\multicolumn{7}{l}{\emph{NPE}} \\
+NPE, 12 flows & {\boldmath$0.120\pm0.038$} & {\boldmath$0.097\pm0.008$} & {\boldmath$0.080\pm0.005$} & {\boldmath$0.062\pm0.003$} & $0.054\pm0.003$ & $0.041\pm0.001$ \\
+NPE, 1 flow & {\boldmath$0.127\pm0.032$}$^\dagger$ & $0.107\pm0.013$ & $0.087\pm0.007$ & $0.070\pm0.003$ & $0.055\pm0.006$ & $0.044\pm0.002$ \\
+\midrule
+\multicolumn{7}{l}{\emph{Appendix (retune sampler)}} \\
+BNN, $\mathcal N(0,1)$ + retune & $0.143\pm0.015$ & $0.126\pm0.018$ & {\boldmath$0.076\pm0.004$} & {\boldmath$0.061\pm0.003$} & {\boldmath$0.032\pm0.002$} & {\boldmath$0.025\pm0.000$} \\
+BNN, empirical Bayes & $0.256\pm0.009$ & $0.128\pm0.009$ & $0.081\pm0.004$ & $0.065\pm0.002$ & $0.037\pm0.001$ & $0.029\pm0.000$ \\
+\midrule
+\midrule
+\multicolumn{7}{l}{\textbf{$\rho$}} \\
+\midrule
+\multicolumn{7}{l}{\emph{Sampled BNN}} \\
+BNN, $\mathcal N(0,1)$ & $0.137\pm0.009$ & $0.108\pm0.007$ & $0.062\pm0.003$ & $0.046\pm0.002$ & {\boldmath$0.017\pm0.001$} & {\boldmath$0.012\pm0.000$} \\
+BNN, data-free scale & $0.140\pm0.008$ & $0.114\pm0.006$ & $0.073\pm0.002$ & $0.056\pm0.001$ & $0.020\pm0.001$ & $0.014\pm0.000$ \\
+BNN, tempered & $0.133\pm0.009$ & $0.102\pm0.006$ & {\boldmath$0.050\pm0.002$} & {\boldmath$0.040\pm0.001$} & -- & -- \\
+\midrule
+\multicolumn{7}{l}{\emph{BNN without sampling}} \\
+Gaussian predictor, 12 nets, capped & $0.144\pm0.012$ & $0.109\pm0.015$ & $0.072\pm0.006$ & $0.060\pm0.001$ & $0.050\pm0.001$ & $0.050\pm0.001$ \\
+Gaussian predictor, 12 nets, converged & $0.134\pm0.018$ & $0.109\pm0.015$ & $0.069\pm0.005$ & $0.051\pm0.002$ & $0.037\pm0.000$ & $0.032\pm0.001$ \\
+Gaussian predictor, 1 net, capped & $0.146\pm0.015$ & $0.117\pm0.018$ & $0.071\pm0.003$ & $0.062\pm0.001$ & $0.054\pm0.005$ & $0.050\pm0.001$ \\
+Gaussian predictor, 1 net, converged & {\boldmath$0.135\pm0.022$} & $0.117\pm0.018$ & $0.069\pm0.004$ & $0.053\pm0.002$ & $0.039\pm0.001$ & $0.034\pm0.001$ \\
+\midrule
+\multicolumn{7}{l}{\emph{NPE}} \\
+NPE, 12 flows & {\boldmath$0.124\pm0.018$} & {\boldmath$0.093\pm0.015$} & $0.066\pm0.009$ & $0.052\pm0.004$ & $0.030\pm0.001$ & $0.028\pm0.000$ \\
+NPE, 1 flow & $0.144\pm0.034$ & {\boldmath$0.095\pm0.016$} & $0.065\pm0.008$ & $0.060\pm0.010$ & $0.029\pm0.002$ & $0.028\pm0.001$ \\
+\midrule
+\multicolumn{7}{l}{\emph{Appendix (retune sampler)}} \\
+BNN, $\mathcal N(0,1)$ + retune & $0.136\pm0.008$ & $0.107\pm0.006$ & $0.055\pm0.002$ & $0.041\pm0.001$ & {\boldmath$0.017\pm0.001$} & $0.012\pm0.000$ \\
+BNN, empirical Bayes & $0.185\pm0.004$ & $0.115\pm0.006$ & $0.064\pm0.001$ & $0.050\pm0.001$ & $0.023\pm0.000$ & $0.017\pm0.000$ \\

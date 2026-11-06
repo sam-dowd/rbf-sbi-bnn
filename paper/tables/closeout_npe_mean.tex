@@ -1,0 +1,42 @@
+\multicolumn{4}{l}{\textbf{$\sigma$}} \\
+\midrule
+\multicolumn{4}{l}{\emph{Sampled BNN}} \\
+BNN, $\mathcal N(0,1)$ & $0.143\pm0.013$ & $0.124\pm0.010$ & {\boldmath$0.025\pm0.001$} \\
+BNN, data-free scale & $0.145\pm0.012$ & $0.127\pm0.008$ & $0.026\pm0.000$ \\
+BNN, tempered & $0.142\pm0.015$ & $0.119\pm0.011$ & -- \\
+\midrule
+\multicolumn{4}{l}{\emph{BNN without sampling}} \\
+Gaussian predictor, 12 nets, capped & $0.167\pm0.021$ & $0.127\pm0.011$ & $0.055\pm0.001$ \\
+Gaussian predictor, 12 nets, converged & $0.159\pm0.023$ & $0.127\pm0.011$ & $0.037\pm0.001$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 12 networks}} \\
+Flow, encoder 8 (= NPE) & {\boldmath$0.120\pm0.038$} & {\boldmath$0.097\pm0.008$} & $0.036\pm0.001$ \\
+Flow, encoder 16 & {\boldmath$0.119\pm0.029$} & {\boldmath$0.096\pm0.010$} & $0.037\pm0.001$ \\
+Gaussian head, encoder 16 & $0.251\pm0.146$ & {\boldmath$0.126\pm0.069$}$^\dagger$ & $0.048\pm0.004$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 1 network (member 0)}} \\
+Flow, encoder 8 (= NPE), 1 net & {\boldmath$0.127\pm0.032$} & $0.107\pm0.013$ & $0.043\pm0.002$ \\
+Flow, encoder 16, 1 net & {\boldmath$0.129\pm0.034$}$^\dagger$ & $0.105\pm0.010$ & $0.044\pm0.006$ \\
+Gaussian head, encoder 16, 1 net & $0.251\pm0.143$ & $0.128\pm0.021$ & $0.052\pm0.008$ \\
+\midrule
+\midrule
+\multicolumn{4}{l}{\textbf{$\rho$}} \\
+\midrule
+\multicolumn{4}{l}{\emph{Sampled BNN}} \\
+BNN, $\mathcal N(0,1)$ & $0.137\pm0.009$ & $0.108\pm0.007$ & {\boldmath$0.012\pm0.000$} \\
+BNN, data-free scale & $0.140\pm0.008$ & $0.114\pm0.006$ & $0.014\pm0.000$ \\
+BNN, tempered & $0.133\pm0.009$ & $0.102\pm0.006$ & -- \\
+\midrule
+\multicolumn{4}{l}{\emph{BNN without sampling}} \\
+Gaussian predictor, 12 nets, capped & $0.144\pm0.012$ & $0.109\pm0.015$ & $0.050\pm0.001$ \\
+Gaussian predictor, 12 nets, converged & $0.134\pm0.018$ & $0.109\pm0.015$ & $0.032\pm0.001$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 12 networks}} \\
+Flow, encoder 8 (= NPE) & {\boldmath$0.124\pm0.018$} & {\boldmath$0.093\pm0.015$} & $0.024\pm0.001$ \\
+Flow, encoder 16 & {\boldmath$0.124\pm0.019$} & {\boldmath$0.092\pm0.015$} & $0.025\pm0.001$ \\
+Gaussian head, encoder 16 & $0.194\pm0.059$ & {\boldmath$0.107\pm0.039$}$^\dagger$ & $0.036\pm0.004$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 1 network (member 0)}} \\
+Flow, encoder 8 (= NPE), 1 net & $0.144\pm0.034$ & {\boldmath$0.095\pm0.016$}$^\dagger$ & $0.027\pm0.002$ \\
+Flow, encoder 16, 1 net & $0.136\pm0.032$$^\dagger$ & {\boldmath$0.099\pm0.021$}$^\dagger$ & $0.027\pm0.003$ \\
+Gaussian head, encoder 16, 1 net & $0.192\pm0.066$ & $0.119\pm0.022$ & $0.038\pm0.008$ \\

@@ -1,0 +1,436 @@
+% ---------------- MCMC samplers and MILE ----------------
+@inproceedings{sommer2025mile,
+  title     = {Microcanonical {L}angevin Ensembles: Advancing the Sampling of {B}ayesian Neural Networks},
+  author    = {Sommer, Emanuel and Robnik, Jakob and Nozadze, Giorgi and Seljak, Uro{\v{s}} and R{\"u}gamer, David},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  note      = {arXiv:2502.06335}
+}
+@inproceedings{sommer2024connecting,
+  title     = {Connecting the Dots: Is Mode-Connectedness the Key to Feasible Sample-Based Inference in {B}ayesian Neural Networks?},
+  author    = {Sommer, Emanuel and Wimmer, Lisa and Papamarkou, Theodore and Bothmann, Ludwig and Bischl, Bernd and R{\"u}gamer, David},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {235},
+  pages     = {45988--46018},
+  year      = {2024}
+}
+@inproceedings{robnik2024mclmc,
+  title     = {Fluctuation without Dissipation: Microcanonical {L}angevin {M}onte {C}arlo},
+  author    = {Robnik, Jakob and Seljak, Uro{\v{s}}},
+  booktitle = {Proceedings of the 6th Symposium on Advances in Approximate Bayesian Inference},
+  series    = {PMLR},
+  volume    = {253},
+  pages     = {111--126},
+  year      = {2024}
+}
+@article{cabezas2024blackjax,
+  title     = {{BlackJAX}: Composable {B}ayesian inference in {JAX}},
+  author    = {Cabezas, Alberto and Corenflos, Adrien and Lao, Junpeng and Louf, R{\'e}mi and others},
+  journal   = {arXiv:2402.10797},
+  year      = {2024}
+}
+@article{robnik2023mchmc,
+  title   = {Microcanonical {H}amiltonian {M}onte {C}arlo},
+  author  = {Robnik, Jakob and De Luca, G. Bruno and Silverstein, Eva and Seljak, Uro{\v{s}}},
+  journal = {Journal of Machine Learning Research},
+  volume  = {24},
+  year    = {2023},
+  number = {311},
+  pages = {1--34}
+}
+@article{betancourt2017conceptual,
+  title   = {A Conceptual Introduction to {H}amiltonian {M}onte {C}arlo},
+  author  = {Betancourt, Michael},
+  journal = {arXiv:1701.02434},
+  year    = {2017}
+}
+@inproceedings{rasmussen1995practical,
+  title     = {A Practical {M}onte {C}arlo Implementation of {B}ayesian Learning},
+  author    = {Rasmussen, Carl Edward},
+  booktitle = {Advances in Neural Information Processing Systems 8},
+  pages     = {598--604},
+  year      = {1996}
+}
+@book{neal1996bayesian,
+  title     = {Bayesian Learning for Neural Networks},
+  author    = {Neal, Radford M.},
+  publisher = {Springer},
+  series    = {Lecture Notes in Statistics},
+  volume    = {118},
+  year      = {1996}
+}
+
+% ---------------- MCMC diagnostics, in general and for BNNs ----------------
+@article{papamarkou2022challenges,
+  title   = {Challenges in {M}arkov Chain {M}onte {C}arlo for {B}ayesian Neural Networks},
+  author  = {Papamarkou, Theodore and Hinkle, Jacob and Young, M. Todd and Womble, David},
+  journal = {Statistical Science},
+  volume  = {37},
+  number  = {3},
+  pages   = {425--442},
+  year    = {2022}
+}
+@inproceedings{izmailov2021bnn,
+  title     = {What Are {B}ayesian Neural Network Posteriors Really Like?},
+  author    = {Izmailov, Pavel and Vikram, Sharad and Hoffman, Matthew D. and Wilson, Andrew Gordon},
+  booktitle = {Proceedings of the 38th International Conference on Machine Learning (ICML)},
+  year      = {2021}
+}
+@article{vehtari2021rhat,
+  title   = {Rank-Normalization, Folding, and Localization: An Improved $\widehat{R}$ for Assessing Convergence of {MCMC}},
+  author  = {Vehtari, Aki and Gelman, Andrew and Simpson, Daniel and Carpenter, Bob and B{\"u}rkner, Paul-Christian},
+  journal = {Bayesian Analysis},
+  volume  = {16},
+  number  = {2},
+  year    = {2021},
+  pages = {667--718}
+}
+@article{gelman1992inference,
+  title   = {Inference from Iterative Simulation Using Multiple Sequences},
+  author  = {Gelman, Andrew and Rubin, Donald B.},
+  journal = {Statistical Science},
+  volume  = {7},
+  number  = {4},
+  year    = {1992},
+  pages = {457--472}
+}
+
+% ---------------- Priors, tempering, empirical Bayes ----------------
+@inproceedings{wenzel2020cold,
+  title     = {How Good is the {B}ayes Posterior in Deep Neural Networks Really?},
+  author    = {Wenzel, Florian and Roth, Kevin and Veeling, Bastiaan S. and {\'S}wi{\k{a}}tkowski, Jakub and Tran, Linh and Mandt, Stephan and Snoek, Jasper and Salimans, Tim and Jenatton, Rodolphe and Nowozin, Sebastian},
+  booktitle = {Proceedings of the 37th International Conference on Machine Learning (ICML)},
+  year      = {2020}
+}
+@inproceedings{fortuin2022priors,
+  title     = {{B}ayesian Neural Network Priors Revisited},
+  author    = {Fortuin, Vincent and Garriga-Alonso, Adri{\`a} and Ober, Sebastian W. and Wenzel, Florian and R{\"a}tsch, Gunnar and Turner, Richard E. and van der Wilk, Mark and Aitchison, Laurence},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022}
+}
+@inproceedings{noci2021disentangling,
+  title     = {Disentangling the Roles of Curation, Data-Augmentation and the Prior in the Cold Posterior Effect},
+  author    = {Noci, Lorenzo and Roth, Kevin and Bachmann, Gregor and Nowozin, Sebastian and Hofmann, Thomas},
+  booktitle = {Advances in Neural Information Processing Systems 34},
+  year      = {2021}
+}
+@phdthesis{mackay1992thesis,
+  title     = {Bayesian Methods for Adaptive Models},
+  author    = {MacKay, David J. C.},
+  school    = {California Institute of Technology},
+  year      = {1992}
+}
+@article{mackay1992practical,
+  title   = {A Practical {B}ayesian Framework for Backpropagation Networks},
+  author  = {MacKay, David J. C.},
+  journal = {Neural Computation},
+  volume  = {4},
+  number  = {3},
+  pages   = {448--472},
+  year    = {1992}
+}
+@article{delaunoy2024lowbudget,
+  title   = {Low-Budget Simulation-Based Inference with {B}ayesian Neural Networks},
+  author  = {Delaunoy, Arnaud and de la Brassinne Bonardeaux, Maxence and Mishra-Sharma, Siddharth and Louppe, Gilles},
+  journal = {arXiv preprint arXiv:2408.15136v1},
+  year    = {2024}
+}
+
+@article{poh2025lensing,
+  title     = {Deep inference of simulated strong lenses in ground-based surveys},
+  author    = {Poh, Jason and Samudre, Ashwin and {\'C}iprijanovi{\'c}, Aleksandra and Frieman, Joshua and Khullar, Gourav and Nord, Brian D.},
+  journal   = {Journal of Cosmology and Astroparticle Physics},
+  volume    = {2025},
+  number    = {05},
+  pages     = {053},
+  year      = {2025},
+  doi       = {10.1088/1475-7516/2025/05/053},
+  eprint    = {2501.08524}
+}
+
+% ---------------- SBI, NPE, flows ----------------
+@article{cranmer2020frontier,
+  title   = {The Frontier of Simulation-Based Inference},
+  author  = {Cranmer, Kyle and Brehmer, Johann and Louppe, Gilles},
+  journal = {Proceedings of the National Academy of Sciences},
+  volume  = {117},
+  number  = {48},
+  year    = {2020},
+  pages = {30055--30062}
+}
+@inproceedings{papamakarios2016fast,
+  title     = {Fast $\epsilon$-free Inference of Simulation Models with {B}ayesian Conditional Density Estimation},
+  author    = {Papamakarios, George and Murray, Iain},
+  booktitle = {Advances in Neural Information Processing Systems 29},
+  year      = {2016}
+}
+@inproceedings{papamakarios2017maf,
+  title     = {Masked Autoregressive Flow for Density Estimation},
+  author    = {Papamakarios, George and Pavlakou, Theo and Murray, Iain},
+  booktitle = {Advances in Neural Information Processing Systems 30},
+  year      = {2017}
+}
+@misc{durkan2020nflows,
+  title  = {nflows: normalizing flows in {PyTorch}},
+  author = {Durkan, Conor and Bekasov, Artur and Murray, Iain and Papamakarios, George},
+  year   = {2020},
+  doi    = {10.5281/zenodo.4296287},
+  howpublished = {Zenodo, version 0.14},
+  note = {doi:10.5281/zenodo.4296287}
+}
+@inproceedings{lueckmann2021benchmark,
+  title     = {Benchmarking Simulation-Based Inference},
+  author    = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
+  booktitle = {Proceedings of the 24th International Conference on Artificial Intelligence and Statistics (AISTATS)},
+  year      = {2021}
+}
+
+@article{hermans2022trust,
+  title     = {A Trust Crisis in Simulation-Based Inference? {Y}our Posterior Approximations Can Be Unfaithful},
+  author    = {Hermans, Joeri and Delaunoy, Arnaud and Rozet, Fran{\c{c}}ois and Wehenkel, Antoine and Begy, Volodimir and Louppe, Gilles},
+  journal   = {Transactions on Machine Learning Research},
+  year      = {2022}
+}
+
+% ---------------- Uncertainty decomposition, ensembles ----------------
+@inproceedings{kendall2017uncertainties,
+  title     = {What Uncertainties Do We Need in {B}ayesian Deep Learning for Computer Vision?},
+  author    = {Kendall, Alex and Gal, Yarin},
+  booktitle = {Advances in Neural Information Processing Systems 30},
+  year      = {2017}
+}
+@inproceedings{lakshminarayanan2017ensembles,
+  title     = {Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles},
+  author    = {Lakshminarayanan, Balaji and Pritzel, Alexander and Blundell, Charles},
+  booktitle = {Advances in Neural Information Processing Systems 30},
+  year      = {2017}
+}
+
+% ---------------- Calibration and validation metrics ----------------
+@inproceedings{lemos2023tarp,
+  title     = {Sampling-Based Accuracy Testing of Posterior Estimators for General Inference},
+  author    = {Lemos, Pablo and Coogan, Adam and Hezaveh, Yashar and Perreault-Levasseur, Laurence},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning (ICML)},
+  year      = {2023}
+}
+@article{talts2018sbc,
+  title   = {Validating {B}ayesian Inference Algorithms with Simulation-Based Calibration},
+  author  = {Talts, Sean and Betancourt, Michael and Simpson, Daniel and Vehtari, Aki and Gelman, Andrew},
+  journal = {arXiv preprint arXiv:1804.06788v2},
+  year    = {2018}
+}
+@article{schad2021workflow,
+  title   = {Toward a Principled {B}ayesian Workflow in Cognitive Science},
+  author  = {Schad, Daniel J. and Betancourt, Michael and Vasishth, Shravan},
+  journal = {Psychological Methods},
+  volume  = {26},
+  number  = {1},
+  year    = {2021}
+}
+
+@article{fortin2014spread,
+  title     = {Why Should Ensemble Spread Match the {RMSE} of the Ensemble Mean?},
+  author    = {Fortin, V. and Abaza, M. and Anctil, F. and Turcotte, R.},
+  journal   = {Journal of Hydrometeorology},
+  volume    = {15},
+  pages     = {1708--1713},
+  year      = {2014}
+}
+@article{levi2022evaluating,
+  title     = {Evaluating and Calibrating Uncertainty Prediction in Regression Tasks},
+  author    = {Levi, Dan and Gispan, Liran and Giladi, Niv and Fetaya, Ethan},
+  journal   = {Sensors},
+  volume    = {22},
+  number    = {15},
+  pages     = {5540},
+  year      = {2022}
+}
+
+% ---------------- Optimisation and hyperparameters ----------------
+@inproceedings{snoek2012practical,
+  title     = {Practical {B}ayesian Optimization of Machine Learning Algorithms},
+  author    = {Snoek, Jasper and Larochelle, Hugo and Adams, Ryan P.},
+  booktitle = {Advances in Neural Information Processing Systems 25},
+  year      = {2012},
+  pages = {2951--2959}
+}
+@inproceedings{kingma2015adam,
+  title     = {Adam: A Method for Stochastic Optimization},
+  author    = {Kingma, Diederik P. and Ba, Jimmy},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2015}
+}
+@inproceedings{loshchilov2019adamw,
+  title     = {Decoupled Weight Decay Regularization},
+  author    = {Loshchilov, Ilya and Hutter, Frank},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+% ---------------- Gaussian processes ----------------
+@book{rasmussen2006gpml,
+  title     = {Gaussian Processes for Machine Learning},
+  author    = {Rasmussen, Carl Edward and Williams, Christopher K. I.},
+  publisher = {MIT Press},
+  year      = {2006}
+}
+
+% ---------------- GP covariance-parameter inference: task precedent (Sec. 3.4, added 2026-11-04) ----------------
+@inproceedings{williams1996gp,
+  title     = {Gaussian Processes for Regression},
+  author    = {Williams, Christopher K. I. and Rasmussen, Carl Edward},
+  booktitle = {Advances in Neural Information Processing Systems 8},
+  pages     = {514--520},
+  year      = {1996}
+}
+
+@techreport{neal1997mc,
+  title     = {{M}onte {C}arlo Implementation of {G}aussian Process Models for {B}ayesian Regression and Classification},
+  author    = {Neal, Radford M.},
+  institution = {Department of Statistics, University of Toronto},
+  number    = {9702},
+  year      = {1997}
+}
+
+@inproceedings{murray2010slice,
+  title     = {Slice Sampling Covariance Hyperparameters of Latent {G}aussian Models},
+  author    = {Murray, Iain and Adams, Ryan Prescott},
+  year      = {2010},
+  booktitle = {Advances in Neural Information Processing Systems 23},
+  note = {arXiv:1006.0868}
+}
+
+@article{handcock1993bayesian,
+  title     = {A {B}ayesian Analysis of Kriging},
+  author    = {Handcock, Mark S. and Stein, Michael L.},
+  journal   = {Technometrics},
+  volume    = {35},
+  number    = {4},
+  pages     = {403--410},
+  year      = {1993}
+}
+
+@article{marin2012abc,
+  title     = {Approximate {B}ayesian Computational Methods},
+  author    = {Marin, Jean-Michel and Pudlo, Pierre and Robert, Christian P. and Ryder, Robin J.},
+  journal   = {Statistics and Computing},
+  volume    = {22},
+  number    = {6},
+  pages     = {1167--1180},
+  year      = {2012}
+}
+
+@inproceedings{chen2021nass,
+  title     = {Neural Approximate Sufficient Statistics for Implicit Models},
+  author    = {Chen, Yanzhi and Zhang, Dinghuai and Gutmann, Michael U. and Courville, Aaron and Zhu, Zhanxing},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021}
+}
+
+@inproceedings{muller2022pfn,
+  title     = {Transformers Can Do {B}ayesian Inference},
+  author    = {M{\"u}ller, Samuel and Hollmann, Noah and Pineda, Sebastian and Grabocka, Josif and Hutter, Frank},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022}
+}
+
+@inproceedings{chang2024ace,
+  title     = {Amortized Probabilistic Conditioning for Optimization, Simulation and Inference},
+  author    = {Chang, Paul E. and Loka, Nasrulloh and Huang, Daolang and Remes, Ulpu and Kaski, Samuel and Acerbi, Luigi},
+  year      = {2025},
+  booktitle = {Proceedings of the 28th International Conference on Artificial Intelligence and Statistics (AISTATS)},
+  note = {arXiv:2410.15320}
+}
+
+@inproceedings{bitzer2023amortized,
+  title     = {Amortized Inference for {G}aussian Process Hyperparameters of Structured Kernels},
+  author    = {Bitzer, Matthias and Meister, Mona and Zimmer, Christoph},
+  booktitle = {Proceedings of the 39th Conference on Uncertainty in Artificial Intelligence (UAI)},
+  year      = {2023}
+}
+
+@article{zammitmangion2024neural,
+  title     = {Neural Methods for Amortized Inference},
+  author    = {Zammit-Mangion, Andrew and Sainsbury-Dale, Matthew and Huser, Rapha{\"e}l},
+  journal   = {Annual Review of Statistics and Its Application},
+  year      = {2025},
+  volume = {12},
+  pages = {311--335},
+  doi = {10.1146/annurev-statistics-112723-034123}
+}
+
+@article{makinen2021lossless,
+  title     = {Lossless, scalable implicit likelihood inference for cosmological fields},
+  author    = {Makinen, T. Lucas and Charnock, Tom and Alsing, Justin and Wandelt, Benjamin D.},
+  journal   = {Journal of Cosmology and Astroparticle Physics},
+  volume    = {2021},
+  number    = {11},
+  pages     = {049},
+  year      = {2021},
+  note      = {arXiv:2107.07405}
+}
+
+@article{huang2019correlations,
+  title     = {Accounting for Correlations When Fitting Extra Cosmological Parameters},
+  author    = {Huang, Yajing and Addison, Graeme E. and Bennett, Charles L.},
+  journal   = {The Astrophysical Journal},
+  volume    = {882},
+  number    = {2},
+  pages     = {124},
+  year      = {2019},
+  doi       = {10.3847/1538-4357/ab3654},
+  note      = {arXiv:1904.10521}
+}
+
+@article{sainsburydale2024neural,
+  title     = {Likelihood-Free Parameter Estimation with Neural {B}ayes Estimators},
+  author    = {Sainsbury-Dale, Matthew and Zammit-Mangion, Andrew and Huser, Rapha{\"e}l},
+  journal   = {The American Statistician},
+  year      = {2024},
+  volume = {78},
+  number = {1},
+  pages = {1--14},
+  doi = {10.1080/00031305.2023.2249522}
+}
+
+% ---------------- Empirical Bayes for BNN prior scales (lit review 2026-11-05) ----------------
+@inproceedings{deng2019adaptive,
+  title     = {An Adaptive Empirical {B}ayesian Method for Sparse Deep Learning},
+  author    = {Deng, Wei and Zhang, Xiao and Liang, Faming and Lin, Guang},
+  booktitle = {Advances in Neural Information Processing Systems 32},
+  year      = {2019},
+  note      = {arXiv:1910.10791}
+}
+@inproceedings{immer2021scalable,
+  title     = {Scalable Marginal Likelihood Estimation for Model Selection in Deep Learning},
+  author    = {Immer, Alexander and Bauer, Matthias and Fortuin, Vincent and R{\"a}tsch, Gunnar and Khan, Mohammad Emtiyaz},
+  booktitle = {Proceedings of the 38th International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {139},
+  pages     = {4563--4573},
+  year      = {2021}
+}
+@inproceedings{lotfi2022bayesian,
+  title     = {{B}ayesian Model Selection, the Marginal Likelihood, and Generalization},
+  author    = {Lotfi, Sanae and Izmailov, Pavel and Benton, Gregory and Goldblum, Micah and Wilson, Andrew Gordon},
+  booktitle = {Proceedings of the 39th International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {162},
+  year      = {2022}
+}
+@inproceedings{antoran2023sampling,
+  title     = {Sampling-Based Inference for Large Linear Models, with Application to Linearised {L}aplace},
+  author    = {Antor{\'a}n, Javier and Padhy, Shreyas and Barbano, Riccardo and Nalisnick, Eric and Janz, David and Hern{\'a}ndez-Lobato, Jos{\'e} Miguel},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  note      = {arXiv:2210.04994}
+}
+@inproceedings{wilson2020bayesian,
+  title     = {{B}ayesian Deep Learning and a Probabilistic Perspective of Generalization},
+  author    = {Wilson, Andrew Gordon and Izmailov, Pavel},
+  year      = {2020},
+  booktitle = {Advances in Neural Information Processing Systems 33},
+  note = {arXiv:2002.08791}
+}
+

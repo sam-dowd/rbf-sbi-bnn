@@ -1,0 +1,18 @@
+\multicolumn{4}{l}{\emph{Sampled BNN}} \\
+BNN, $\mathcal N(0,1)$ & $-0.363\pm0.059$ & $-0.775\pm0.062$ & {\boldmath$-2.284\pm0.005$} \\
+BNN, data-free scale & {\boldmath$-0.603\pm0.050$} & $-0.867\pm0.060$ & $-2.270\pm0.003$ \\
+BNN, tempered & $-0.419\pm0.049$ & $-0.879\pm0.050$ & -- \\
+\midrule
+\multicolumn{4}{l}{\emph{BNN without sampling}} \\
+Gaussian predictor, 12 nets, capped & $-0.475\pm0.177$ & $-0.945\pm0.159$ & $-1.814\pm0.012$ \\
+Gaussian predictor, 12 nets, converged & {\boldmath$-0.551\pm0.199$} & $-0.946\pm0.159$ & $-2.076\pm0.014$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 12 networks}} \\
+Flow, encoder 8 (= NPE) & $-0.441\pm0.298$ & {\boldmath$-1.062\pm0.186$} & $-2.159\pm0.007$ \\
+Flow, encoder 16 & $-0.351\pm0.249$ & {\boldmath$-1.077\pm0.161$} & $-2.147\pm0.019$ \\
+Gaussian head, encoder 16 & {\boldmath$+252.274\pm1114.377$}$^\dagger$ & {\boldmath$-0.997\pm0.216$}$^\dagger$ & $-1.984\pm0.050$ \\
+\midrule
+\multicolumn{4}{l}{\emph{NPE-style, 1 network (member 0)}} \\
+Flow, encoder 8 (= NPE), 1 net & $+0.578\pm1.205$ & $-0.407\pm0.348$ & $-2.077\pm0.044$ \\
+Flow, encoder 16, 1 net & {\boldmath$+1.500\pm4.738$}$^\dagger$ & $-0.154\pm0.919$ & $-2.061\pm0.047$ \\
+Gaussian head, encoder 16, 1 net & {\boldmath$+1874259.521\pm8371757.331$}$^\dagger$ & $+8.119\pm19.538$ & $-1.910\pm0.146$ \\
