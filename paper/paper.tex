@@ -552,26 +552,26 @@ single network and as a 12-network ensemble.
 
 \subsubsection{Single network}
 \label{sec:gauss_single}
-Member 0 of the 12, used alone ($C=1$ in Eq.~\eqref{eq:decomp}). Its predictive is one bivariate Gaussian, so its width
+The single network is member 0 of the 12, used alone ($C=1$ in Eq.~\eqref{eq:decomp}). Its predictive is one bivariate Gaussian, so its width
 is aleatoric only, with no term for uncertainty about the network itself. It is compared with a single NPE flow at one
 fitted network each; the two differ in head, encoder, optimizer and hyperparameters, not only in head.
 
 \subsubsection{12-network ensemble}
 \label{sec:gauss_ens}
-The equal-weight mixture of the 12 networks ($C=12$), whose epistemic term is the spread of the networks' predicted
-means (Eq.~\eqref{eq:decomp}); a deep ensemble in the sense of \citet{lakshminarayanan2017ensembles}. It has the same
+The ensemble is the equal-weight mixture of the 12 networks ($C=12$), whose epistemic term is the spread of the networks' predicted
+means (Eq.~\eqref{eq:decomp}), and is a deep ensemble in the sense of \citet{lakshminarayanan2017ensembles}. It has the same
 ensemble size as the BNN and the NPE ensemble, so it is the comparison that separates the effect of sampling from the
 effect of ensembling (Section~\ref{sec:intro}).
 
 \subsection{Neural posterior estimator}
 \label{sec:npe}
-A conditional masked autoregressive flow \citep{papamakarios2017maf} in \code{nflows} \citep{durkan2020nflows},
+NPE is a conditional masked autoregressive flow \citep{papamakarios2017maf} in \code{nflows} \citep{durkan2020nflows},
 trained as a neural posterior estimator \citep{papamakarios2016fast}. A context encoder
 $g:\mathbb{R}^{100}\to\mathbb{R}^{8}$ (layers $100\to16\to16\to8$, ReLU) summarizes $S$. The flow maps a
 standard normal on $\mathbb{R}^2$ through two blocks, each a masked affine autoregressive transform (a masked
 autoencoder for distribution estimation, MADE, with 16 hidden units, one residual block, ReLU, conditioned on $g(S)$, scale $\mathrm{softplus}(\cdot)+\varepsilon$)
 followed by reversing the variable order, so each parameter is transformed conditional on the other in one
-of the two blocks. 3{,}920 parameters in total (encoder 2{,}024, flow 1{,}896). Training maximizes
+of the two blocks. It has 3{,}920 parameters in total (encoder 2{,}024, flow 1{,}896). Training maximizes
 $\sum_i\log q(\theta_i\mid S_i)$ with Adam \citep{kingma2015adam} and coupled ($L_2$) weight decay at a per-size
 learning rate and weight decay (Section~\ref{sec:hp}), for up to 20{,}000 steps, evaluating the validation NLL every
 100 steps and stopping after 20 evaluations without an improvement of $10^{-4}$; the best state is restored. Because
@@ -582,11 +582,11 @@ NPE is evaluated as a single flow and as a 12-flow ensemble. Two one-change vari
 
 \subsubsection{Single flow}
 \label{sec:npe_single}
-One flow trained as above, with the fit's seed. It is member 0 of the ensemble below.
+The single flow is one flow trained as above, with the fit's seed. It is member 0 of the ensemble below.
 
 \subsubsection{12-flow ensemble}
 \label{sec:npe_ens}
-Twelve flows on the same training rows and early-stopping split, differing only in their initialization seeds
+The ensemble has twelve flows on the same training rows and early-stopping split, differing only in their initialization seeds
 ($s+10{,}000\,k$ for member $k$, with $s$ the fit's seed, so member 0 is the single flow). The ensemble is the
 equal-weight mixture of the 12 flows (Section~\ref{sec:setup}), the deep-ensemble construction that
 \citet{hermans2022trust} find ``provides more reliable approximations'' and that \citet{delaunoy2024lowbudget} use, with
@@ -601,9 +601,9 @@ run). This long-trained ensemble is the NPE comparator at $n=10{,}000$ wherever 
 
 \subsection{Bayesian neural network}
 \label{sec:bnn}
-\textbf{Network.} A fully connected network $f_{\mathbf w}:\mathbb{R}^{100}\to\mathbb{R}^5$ with three hidden
-layers of width 16, the soft-sign activation $x/(1+|x|)$ on every hidden layer, and a linear output layer:
-$100\to16\to16\to16\to5$, $d=2{,}245$ weights and biases. Soft-sign is used because \code{bde} offers no
+\textbf{Network.} The network is a fully connected $f_{\mathbf w}:\mathbb{R}^{100}\to\mathbb{R}^5$ with three hidden
+layers of width 16, the soft-sign activation $x/(1+|x|)$ on every hidden layer, and a linear output layer
+($100\to16\to16\to16\to5$), with $d=2{,}245$ weights and biases. Soft-sign is used because \code{bde} offers no
 $\tanh$; it is smooth and saturating like $\tanh$, with heavier tails. The five outputs parameterize the
 bivariate normal of Eq.~\eqref{eq:biv} in standardized units.
 
@@ -681,7 +681,7 @@ variance of weight $i$ over that segment's steps,
 \label{eq:eb_block}
 \gamma=d-\sum_i v_i/\tau^2\ \ (\text{clamped to }[1,d]),\qquad \tau_{\mathrm{target}}^2=\sum_i m_i^2/\gamma,
 \end{equation}
-MacKay's condition (Section~\ref{sec:bg_eb}) with the posterior mean and covariance replaced by the segment's sample
+which is MacKay's condition (Section~\ref{sec:bg_eb}) with the posterior mean and covariance replaced by the segment's sample
 moments. $\log\tau$ then moves halfway towards $\log\tau_{\mathrm{target}}$, by at most a factor of 2 per update, with a
 floor of $10^{-3}$. The scale is per member, and all 1{,}000 kept draws per chain are used, including those drawn before
 the scale has settled. The damping, the step cap and the floor have no source. The fixed-scale control,
@@ -714,15 +714,14 @@ improvement, log-uniform search ranges $\mathrm{lr}\in[10^{-5},10^{-1}]$ and $\m
 10 random initial points, random state 123, and a wall-clock budget per size. The objective is the validation NLL on an 80/20
 split of the repeat-0 training rows. Within its budget the search ran 3--20 trials per size and acted as a random search
 of 3--10 points (Appendix~\ref{app:hp}). The BNN and the Gaussian predictor are not tuned by Bayesian optimization: they
-share one pair per size,
-chosen on a grid for the BNN's network as a standalone predictor: one network pretrained exactly as in
-Section~\ref{sec:impl}, without sampling, scored by its NLL on 1{,}000 held-out pool rows averaged over the training
+share one pair per size. It is chosen on a grid for the BNN's network as a standalone predictor, with one network
+pretrained exactly as in Section~\ref{sec:impl}, without sampling, scored by its NLL on 1{,}000 held-out pool rows averaged over the training
 sets of repeats 0--2. The grid has 17 learning rates from $10^{-5}$ to $10^{-1}$ in quarter decades and 15 weight decays
 from $10^{-7}$ to $1$ in half decades (the upper bound is raised from $10^{-2}$ because AdamW's decoupled decay is
 nearly inert below it at these learning rates), and the argmin is used at every size. At $n=50$ the argmin is
 noise-driven, and at its learning rate two of the three grid fits stop at the 2{,}000-step cap. The converged Gaussian
-predictor keeps these values, which were chosen under the 2{,}000-step budget. Search details, budgets and rationale, including the earlier BNN
-search on the full MILE fit that this grid supersedes: Appendix~\ref{app:hp}.
+predictor keeps these values, which were chosen under the 2{,}000-step budget. Appendix~\ref{app:hp} gives the search details, budgets and rationale, including
+the earlier BNN search on the full MILE fit that this grid supersedes.
 
 \begin{table}[h]
 \centering\small
@@ -1343,7 +1342,7 @@ $\sigma$ (top) and $\rho$ (bottom), bolded separately as in Table~\ref{tab:npe_n
 \subsection{Fairness of the comparison}
 \label{app:fairness}
 The comparisons of Section~\ref{sec:experiments} are paired on training rows and test set, but the methods differ in
-budget, tuning and data use. Each difference, its direction and, where possible, its size:
+budget, tuning and data use. Each difference is listed below with its direction and, where possible, its size.
 \begin{itemize}
 \item \textbf{Training budget of NPE.} NPE runs at its default budget (at most 20{,}000 steps, patience 20 evaluations)
   except at $n=10{,}000$, where the long-trained ensemble is used. At $n=10{,}000$ the default budget cost 0.054 nats
@@ -1436,7 +1435,7 @@ ensemble is close to warranted except at $n=50$.
 \subsection{Moments and calibration}
 \label{app:moments}
 \label{sec:direction}
-\textbf{Metrics.} Per parameter, with $\hat\mu_j$, $\hat s_j$ the mean and total standard deviation of a method's
+\textbf{Metrics.} All metrics are computed per parameter, with $\hat\mu_j$, $\hat s_j$ the mean and total standard deviation of a method's
 predictive and $\mu^\star_j$, $s^\star_j$ those of the exact posterior. \emph{Mean error}:
 $\big(\frac1M\sum_j(\hat\mu_j-\mu^\star_j)^2\big)^{1/2}$, 0 for the exact posterior; against the true parameter the RMS
 error is bounded below, in expectation, by that of the exact posterior mean (0.156 for $\sigma$ and 0.050 for $\rho$),
@@ -1849,7 +1848,7 @@ $\tilde p(\mathbf w)\propto p(\mathbf w)\,p(\mathcal{D}\mid\mathbf w)^{1/T-1}$, 
 therefore not a prior. Any prior, of any scale or shape, can at most approximate the effect of likelihood tempering,
 never reproduce it; Eq.~\eqref{eq:tempered_obs} shows the effect is a change of the likelihood instead.
 
-\textbf{Where the temperature acts.} Only in the MCLMC target, during warmup and sampling. Pretraining (the
+\textbf{Where the temperature acts.} The temperature acts only in the MCLMC target, during warmup and sampling. Pretraining (the
 deep-ensemble optimization that initializes the chains) uses the untempered likelihood. Prediction and evaluation
 are untempered: each posterior draw $\mathbf w_{ks}$ predicts with its own Gaussian
 $\mathcal{N}_2(\theta;\boldsymbol\mu_{ks}(S),\Sigma_{ks}(S))$, and the predictive is the mixture of
@@ -1928,7 +1927,7 @@ density on $\theta$ in original units, evaluated exactly at $\theta^\ast_j$:
   \end{equation}
   each component from Eq.~\eqref{eq:biv} after mapping the draw's outputs back to original units
   ($\boldsymbol\mu\mapsto\boldsymbol\mu\odot\mathbf s_y+\mathbf m_y$, $s_\bullet\mapsto s_\bullet s_{y,\bullet}$, $r$
-  unchanged), so no Jacobian term arises. Evaluated as $\operatorname{logsumexp}$ over components minus $\log(KS)$.
+  unchanged), so no Jacobian term arises. It is evaluated as $\operatorname{logsumexp}$ over components minus $\log(KS)$.
 \item \emph{NPE}: by change of variables, $\log q_\phi(\theta\mid S)=\log\mathcal{N}\big(\Psi(\theta);0,I_2\big)+
   \log\lvert\det\partial \Psi/\partial\theta\rvert$, where $\Psi$ maps $\theta$ to the base variable through two masked
   affine autoregressive layers, each followed by an order reversal (Jacobian determinant 1). Each layer sets
@@ -1955,21 +1954,21 @@ methods and, from the earlier runs, two checks of the evidence's fixed point.
 
 Both models replace $\mathcal{N}(0,1)$ by an isotropic $\mathcal{N}(0,\tau^2)$ (Section~\ref{sec:bg_eb}).
 
-\emph{Data-free width.} $\tau=0.3655$, chosen before any training by Gaussian-process Bayesian optimization of
+\emph{Data-free width.} The scale $\tau=0.3655$ is chosen before any training by Gaussian-process Bayesian optimization of
 $|\text{coverage area}|$ of the prior predictive: weights drawn from $\mathcal{N}(0,\tau^2)$, the untrained network's predictive
 evaluated by TARP (Appendix~\ref{app:moments}) on fresh simulator draws, with inputs standardized by a simulator-drawn
 measurement set and $\theta$ by the prior moments. The width minimizing $|\text{coverage area}|$ gives $+0.0037$, against $+0.200$ for
-$\mathcal{N}(0,1)$. It is a continuous version of the fixed-width sweep of \citet[Fig.~1]{delaunoy2024lowbudget}. Run on stock MILE,
+$\mathcal{N}(0,1)$. It is a continuous version of the fixed-width sweep of \citet[Fig.~1]{delaunoy2024lowbudget}. It is run on stock MILE,
 paired with $\mathcal{N}(0,1)$. At fit time the BNN standardizes with training-set statistics, so at small $n$ the width
 acts in slightly different units from those it was calibrated in.
 
-\emph{Empirical Bayes.} One scale for all weights, updated between blocks inside the re-tune loop
+\emph{Empirical Bayes.} One scale for all weights is updated between blocks inside the re-tune loop
 (Section~\ref{sec:bnn_eb}). Each member starts at the RMS of its pretrained weights; the scale is fixed for the
 one-time warmup and within each 1{,}000-step block. After a block, the target $\tau_{\text{t}}^2=\lVert\mathbf m\rVert^2/\gamma$ of
 Eq.~\eqref{eq:eb_fixed_point} is computed from the block's per-weight mean $\mathbf m$ and variance, with $\gamma$ clamped
 to $[1,d]$; $\log\tau$ moves half-way towards $\log\tau_{\text{t}}$, by at most a factor 2, with a floor of $10^{-3}$, and
 $(L,\epsilon)$ are re-tuned. All kept draws are retained, including those of early blocks drawn under a scale still moving.
-Paired with $\mathcal{N}(0,1)$ plus the same re-tune.
+It is paired with $\mathcal{N}(0,1)$ plus the same re-tune.
 
 \begin{table}[h]
 \centering\small
@@ -2078,7 +2077,7 @@ network's function-space prior.
 
 \subsection{Calibration of all variants}
 \label{app:side}
-All models of this section and NPE, paired by repeat. Empirical Bayes runs on the re-tune loop; its control,
+The table covers all models of this section and NPE, paired by repeat. Empirical Bayes runs on the re-tune loop; its control,
 $\nzo$ with the re-tune, is listed as its own column, since the re-tune alone changes the NLL.
 
 \begin{table}[h]
@@ -2122,12 +2121,12 @@ within its sd. Values below 1 are over-confident.}
 \subsection{Other variants}
 \label{sec:res_other}
 \label{app:other}
-3-member runs. Unless stated, 5 repeats, paired with $\nzo$ as in Section~\ref{sec:paired}, the earlier BNN
-hyperparameters (\code{results/bde\_params\_n<n>.npz} at every size), and a negative difference means the variant
-is better.
+All runs here are 3-member fits. Unless stated, they use 5 repeats, are paired with $\nzo$ as in Section~\ref{sec:paired}
+and use the earlier BNN hyperparameters (\code{results/bde\_params\_n<n>.npz} at every size); a negative difference
+means the variant is better.
 
-\textbf{Rasmussen-style Gibbs} (\code{rasmussen\_gibbs\_retune}). Per-weight scales $w_j\mid\tau_j^2\sim\mathcal N(0,\tau_j^2)$,
-$\tau_j^2\sim\text{Inv-Gamma}(2,1)$ \citep{rasmussen1995practical}; each step draws every $\tau_j^2$
+\textbf{Rasmussen-style Gibbs} (\code{rasmussen\_gibbs\_retune}). Each weight has its own scale, $w_j\mid\tau_j^2\sim\mathcal N(0,\tau_j^2)$ with
+$\tau_j^2\sim\text{Inv-Gamma}(2,1)$ \citep{rasmussen1995practical}, and each step draws every $\tau_j^2$
 from its conjugate conditional and moves $\mathbf w$ by MCLMC, with the re-tune. Against $\nzo$ at the same 125{,}000 steps and 10{,}000 kept
 draws: test NLL $-0.149\pm0.056$ ($n=50$, 5/5), $-0.025\pm0.106$ ($n=100$, 2/5), $-0.253\pm0.096$ ($n=500$, 5/5),
 $-0.200\pm0.045$ ($n=1{,}000$, 5/5), with smaller widths at every size. Decomposed at 10{,}000 steps: at $n=500$ and
@@ -2136,13 +2135,13 @@ $-0.004\pm0.015$), and Gibbs without the re-tune equals $\nzo$ ($+0.007\pm0.154$
 variants match the fixed Student-$t(4,0.7071)$, the marginal of the Gibbs prior, and beat $\nzo$ by 0.16 (5/5)
 regardless of the re-tune. So the gain is the re-tune at $n\ge500$ and the marginal prior shape at $n=50$.
 
-\textbf{Block Gibbs} (\code{bnn.fit\_gibbs\_hierarchical}, single runs). Centred $w_j\sim\mathcal N(0,\tau_j^2)$,
-$\tau_j^2\sim\text{Inv-Gamma}(2,1)$, alternating conjugate $\tau$ sweeps with ordinary MCLMC on $\mathbf w$. $n=100$:
+\textbf{Block Gibbs} (\code{bnn.fit\_gibbs\_hierarchical}, single runs). The prior is centred, $w_j\sim\mathcal N(0,\tau_j^2)$ with
+$\tau_j^2\sim\text{Inv-Gamma}(2,1)$, and the sampler alternates conjugate $\tau$ sweeps with ordinary MCLMC on $\mathbf w$. $n=100$:
 $\max\widehat R$ 1.03, test NLL $-0.905$. $n=10{,}000$: $\tau$ settles within 3--4 sweeps, yet $\max\widehat R=8.25$,
 so the large-$n$ mixing failure persists with no coupling between weights and scales inside an MCMC step.
 
 \textbf{Joint MCMC over per-weight scales} (\code{prior\_family="hierarchical"}, single runs at $n=100$).
-Non-centred $w_j=\tau_j z_j$, $\tau_j=g(u_j)$, $u_j\sim\mathcal N(0,1)$, all sampled by MCLMC. $g=\exp$ makes $\tau$
+The prior is non-centred, $w_j=\tau_j z_j$ with $\tau_j=g(u_j)$ and $u_j\sim\mathcal N(0,1)$, and MCLMC samples all of them. $g=\exp$ makes $\tau$
 log-normal and some $\tau_j$ diverge; $g=\mathrm{softplus}$ (light-tailed) was stable and the best-mixing of the
 four; $g(u)=|u|$ diverged again, more slowly: in one chain two of 2{,}245 weights produced an aleatoric width of
 48.9 / 34.3 (about 150 times every other run) while $\max\widehat R$ was 1.012; the bounded link
@@ -2150,8 +2149,8 @@ $\tau_{\max}\Phi(u)$ was first evaluated on wrongly reconstructed weights (Appen
 
 \textbf{Student-$t$ and Laplace.} Appendix~\ref{sec:res_shape}.
 
-\textbf{Optimized per-weight prior} \citep{delaunoy2024lowbudget} (\code{legacy/optimize\_prior.py}). Per-weight
-Gaussian $(\mu_j,\sigma_j)$ optimized for zero-data coverage. Each estimator fix improved the objective and worsened
+\textbf{Optimized per-weight prior} \citep{delaunoy2024lowbudget} (\code{legacy/optimize\_prior.py}). Each weight
+has its own Gaussian $(\mu_j,\sigma_j)$, optimized for zero-data coverage. Each estimator fix improved the objective and worsened
 the fit (single runs, $n=100$): mean prior scale 1.00 / 0.150 / 0.141, coverage area 0.0328 / 0.0126 / 0.0109, test NLL
 $-0.772$ / $-0.615$ / $-0.503$; the best coverage area never reached the isotropic data-free width's 0.0037. Deviations from the
 paper: its kernel-amplitude rule assumes a uniform parameter prior (ours is a truncated normal), and its kernel has a
