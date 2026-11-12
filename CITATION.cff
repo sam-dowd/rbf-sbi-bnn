@@ -4,5 +4,5 @@ title: "Bayesian neural networks versus neural posterior estimation for simulati
 authors:
   - family-names: Dowd
     given-names: Sam
-    affiliation: "Seljak Group, Lawrence Berkeley National Laboratory"
+    affiliation: "Seljak Group, UC Berkeley"
 repository-code: "https://github.com/sam-dowd/rbf-sbi-bnn"

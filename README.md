@@ -1,7 +1,7 @@
 # Bayesian neural networks versus neural posterior estimation with little data
 
 Companion code for the report *Bayesian neural networks versus neural posterior estimation for simulation-based
-inference with little data* (Sam Dowd, Seljak Group, Lawrence Berkeley National Laboratory), in
+inference with little data* (Sam Dowd, Seljak Group, UC Berkeley), in
 [`paper/paper.pdf`](paper/paper.pdf).
 
 The task is a toy version of simulation-based inference on cosmological fields: infer the amplitude σ and length

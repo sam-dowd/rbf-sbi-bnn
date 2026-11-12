@@ -62,7 +62,7 @@ PAIRED_MODELS = {"N01": "final_bnn_stdnormal_pretuned", "datafree": "final_bnn_g
 
 PAIRED_LABEL = {"N01": r"BNN $\mathcal N(0,1)$", "datafree": "BNN data-free", "temp": "BNN tempered",
          "retune": r"BNN $\mathcal N(0,1)$+retune", "EB": "BNN emp.\\ Bayes",
-         "GP12c": "GP 12 conv.", "GP1c": "GP 1 conv.", "GP12": "GP 12 capped", "GP1": "GP 1 capped",
+         "GP12c": "Gaussian predictor 12 conv.", "GP1c": "Gaussian predictor 1 conv.", "GP12": "Gaussian predictor 12 capped", "GP1": "Gaussian predictor 1 capped",
          "NPE12": "NPE 12", "NPE1": "NPE 1", "NPE12long": "NPE 12 long"}
 
 PAIRED_BLOCKS = [

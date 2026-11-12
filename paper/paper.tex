@@ -19,6 +19,7 @@
 \newcommand{\nzo}{\mathcal{N}(0,1)}
 \newcommand{\code}[1]{\texttt{#1}}
 \makeatletter\newcommand{\inputrows}[1]{\@@input #1 }\makeatother
+\makeatletter\newcommand{\runinsubsection}{\@startsection{subsection}{2}{\z@}{3.25ex \@plus1ex \@minus.2ex}{-1em}{\normalfont\normalsize\bfseries}}\makeatother
 \newenvironment{plan}{\par\color{gray}\small\textbf{Plan.}\ }{\par}
 \newcommand{\tbd}{{\color{red}[insert here]}}
 \newcommand{\secTBD}{{\color{red}*}}
@@ -33,111 +34,103 @@
 {\Large\bfseries Bayesian neural networks versus neural posterior estimation\\
 for simulation-based inference with little data}\\[0.5em]
 {\normalsize Sam Dowd}\\[0.2em]
-{\small Seljak Group, Lawrence Berkeley National Laboratory}\\[0.2em]
+{\small Seljak Group, UC Berkeley}\\[0.2em]
 {\small November 2026}
 \end{center}
 
 \begin{abstract}
-We construct a toy problem for simulation-based inference on cosmological fields, which in the simplest, Gaussian
-setting depend on their parameters only through the power spectrum: inferring the amplitude and length scale of an
-RBF kernel, which set a Gaussian field's power spectrum, from the empirical covariance of ten noisy draws of the field,
-a task whose exact posterior is known. On it we compare Bayesian neural networks (BNNs) sampled with Microcanonical
-Langevin Ensembles (MILE) against neural posterior estimation (NPE) at small simulation budgets. Three 12-chain BNNs are compared: one under MILE's
-default $\mathcal N(0,1)$ prior; one with an improved prior, a weight scale chosen without training data; and one with
-an improved posterior, a tempered likelihood with $T$ chosen on validation data. The comparators are 12-member ensembles
-of NPE and of the BNN's own networks trained without sampling, on $n=50$ to $10{,}000$ simulations. Against single
-networks the BNN has the lower test negative log-likelihood (NLL) at every $n$, but at $n\le100$ ensembling the
-baselines matches this advantage. Against ensembles, the BNN does not beat NPE in the low-data regime: NPE is better at
-$n=100$ by 0.18--0.29 nats, and at $n=50$ only the BNN with the data-free prior is marginally better. The BNN beats NPE
-from $n=500$ with tempering and from $n=5{,}000$ without, by 0.11--0.20 nats. At small $n$ the BNN is more robust than
-NPE: its test NLL varies 3--6 times less across training sets, its worst training set is better, and it is never
-badly over-confident. With the data-free prior it is also as well calibrated as NPE and closer to the warranted
-width at $n=50$, whereas under $\mathcal N(0,1)$ and tempering it is too wide. The prior improvement helps most at the
-smallest $n$, removing most of the excess predictive width of the default prior; tempering helps most at intermediate
-$n$.
+We construct a toy problem for simulation-based inference (SBI) on cosmological fields, which in the simplest,
+Gaussian setting depend on their parameters only through the power spectrum: inferring the amplitude and length scale
+of a radial basis function (RBF) kernel, which set a Gaussian field's power spectrum, from the empirical covariance of
+ten noisy draws of the field, a task whose exact posterior is known. On it we compare Bayesian neural networks (BNNs)
+sampled with Microcanonical Langevin Ensembles (MILE) against neural posterior estimation (NPE) at small simulation
+budgets, $n=50$ to $10{,}000$. Three 12-chain BNNs, under MILE's default $\mathcal N(0,1)$ prior, with a weight-prior
+scale chosen without training data (the data-free prior) and with a tempered likelihood, are compared with 12-member
+ensembles of NPE and of the BNN's own networks trained without sampling. Against single networks the BNN has the lower
+test negative log-likelihood (NLL) at every $n$, but at $n\le100$ ensembling the baselines matches this advantage.
+Against ensembles, the BNN does not beat NPE on average in the low-data regime: NPE is better at $n=100$ by
+0.18--0.29 nats, and at $n=50$ only the BNN with the data-free prior is marginally better. The BNN beats NPE from
+$n=500$ with tempering and from $n=5{,}000$ without, by 0.11--0.20 nats. At small $n$ the BNN is nonetheless the more
+reliable estimator: its test NLL varies 3--6 times less across training sets than NPE's, its worst training set is
+better, and it is never badly over-confident, which we argue matters more than the average when one estimator is
+trained once and applied to one observation. Under $\mathcal N(0,1)$ the BNN is too wide at small $n$, almost entirely
+in its aleatoric term; against the exact posterior this is not irreducible noise, and we read it as epistemic
+uncertainty from a misspecified prior reported as aleatoric. The data-free prior removes most of the excess and helps
+most at the smallest $n$, where the scale of the prior is the dominant error; tempering helps most at intermediate
+$n$, where what remains is the isotropic Gaussian form of the prior.
 \end{abstract}
 
 \tableofcontents
 
 \section{Introduction}
 \label{sec:intro}
-Many sciences describe phenomena with simulators that are high-fidelity but ``poorly suited for inference'':
-the likelihood of an observation given the parameters is intractable, while drawing simulated data is easy
-\citep{cranmer2020frontier}. Cosmology is a central case: parameters are inferred from fields that, in the simplest,
-Gaussian setting, depend on them only through the power spectrum \citep{makinen2021lossless}, and realistic field
-simulations are costly enough that training sets can be small; \citet{delaunoy2024lowbudget} study a cosmological task
-with 1{,}800 training simulations. Simulation-based inference (SBI) learns the inverse map from simulated pairs. Neural
-posterior estimation (NPE) trains a conditional density estimator on pairs $(\theta,x)$ to learn ``an accurate
-parametric representation of the entire true posterior distribution'' \citep{papamakarios2016fast}, typically a
-normalizing flow \citep{papamakarios2017maf}. When simulations are expensive, the estimator is trained on few of
-them, and its own uncertainty about the inverse map should then widen the posterior. A standard NPE has no
-mechanism for this: it returns one fitted density, and current SBI algorithms ``can yield overconfident posterior
-approximations'' \citep{hermans2022trust}. For scientific use an over-confident posterior is the more harmful
-error, which motivates conservative inference algorithms and the finding that ensembling ``provides more reliable
-approximations'' \citep{hermans2022trust}.
+Many sciences describe phenomena with simulators whose likelihood is intractable but from which data are easy to draw
+\citep{cranmer2020frontier}. Simulation-based inference (SBI) turns this around and learns the map from data back to
+parameters from simulated pairs. In neural posterior estimation (NPE), its most widely used form, a conditional density
+estimator, typically a normalizing flow, is trained on pairs $(\theta,x)$ to approximate the posterior directly
+\citep{papamakarios2016fast,papamakarios2017maf}. Cosmology is one of the fields where this matters most. In the
+simplest, Gaussian setting a cosmological field depends on its parameters only through its power spectrum
+\citep{makinen2021lossless}, and realistic field simulations are expensive enough that training sets are often small.
+Even CAMELS (Cosmology and Astrophysics with Machine Learning Simulations), the largest suite of cosmological
+hydrodynamic simulations built for training machine-learning models, contains only a few thousand simulations
+\citep{villaescusa2021camels}.
 
-Bayesian neural networks (BNNs) address this directly: placing a posterior on the network's weights adds an
-epistemic term to the predictive that should grow as the training set shrinks \citep{kendall2017uncertainties}.
-\citet{delaunoy2024lowbudget} make the NPE flow itself Bayesian, fitted by mean-field variational inference under an
-optimized weight prior, on four benchmarks at $10$ to $10^6$ simulations. Their BNN-NPE stays conservative down to
-budgets of $O(10)$, where NPE ``produces an overconfident approximation and excludes most of the relevant parts of the
-posterior'', but ``converges slowly towards the same posterior as NPE'': BNN methods ``might need more simulated data
-in order to reach a predictive power similar to methods that do not use BNNs, such as NPE''. On a cosmology task with
-1,800 training simulations, a temperature below 1 on the prior term of the variational objective ``was needed to reach
-reasonable predictive performance''. \citet{poh2025lensing} compare NPE with a variational BNN for strong-lens
-parameter estimation at 200,000 to 800,000 training simulations and find NPE ``more accurate, precise, and
-well-calibrated'' for most parameters; their BNNs ``tend to be underconfident''. In both studies the BNN is wider than
-NPE: at small budgets, where NPE is over-confident, this is the safer error; at large budgets, where NPE is calibrated,
-it is miscalibration. Both fit the BNN by variational inference, and neither compares with a reference posterior:
-\citet{delaunoy2024lowbudget} score the density at the nominal parameter and coverage, and \citet{poh2025lensing} use
-simulation-based calibration and ``did not compare NPE to MCMC''. Sampling
-BNN posteriors by MCMC has been considered impractical because weight-space posteriors are high-dimensional,
-multimodal and non-identifiable \citep{papamarkou2022challenges,izmailov2021bnn}. Microcanonical Langevin ensembles
-(MILE) combine deep-ensemble initialization with short MCLMC chains and make sampling-based BNN inference
-practical at moderate cost \citep{sommer2025mile}. Deep ensembles are the standard non-Bayesian route to
-epistemic uncertainty and can be read as approximate Bayesian model averaging
-\citep{lakshminarayanan2017ensembles,wilson2020bayesian}; MILE is itself an ensemble, its chains started from a deep
-ensemble \citep{sommer2024connecting}, and \citet{delaunoy2024lowbudget} use 5-member NPE ensembles as a baseline. A
-BNN compared with a single network therefore differs from it in two ways, ensembling and sampling, and only the second
-is specific to Bayesian inference.
+Small training sets raise a problem that NPE does not address. An estimator that has seen few simulations is itself
+uncertain about the inverse map, and that uncertainty ought to widen the posterior it reports. A standard NPE has no
+way to express it, since it returns a single fitted density whatever the budget, and neural SBI algorithms are known to
+produce over-confident posteriors \citep{hermans2022trust}. In scientific use this is the more harmful kind of error,
+because an over-confident posterior excludes parameter values that the data do not rule out. Ensembling several
+estimators is one remedy, and \citet{hermans2022trust} recommend it.
 
-\textbf{Question.} \emph{Do BNNs sampled with MILE perform better than NPE when the simulation budget is small?}
-We answer it on a toy version of cosmological field inference whose exact posterior is available
-(Section~\ref{sec:why_task}): recovering the amplitude and lengthscale of an
-RBF kernel from the empirical covariance of ten draws of a Gaussian process. Three methods are trained on
-$n=50$ to $10{,}000$ simulations, each as a 12-member ensemble: a MILE-sampled BNN with a heteroskedastic bivariate
-Gaussian head, an NPE, and a Gaussian predictor, the BNN's own 12 pretrained networks trained to convergence and not
-sampled. Equal ensembling separates the two differences above: the BNN against the Gaussian predictor measures what
-sampling the weights adds over the same networks optimized to convergence, and the BNN against NPE is compared at
-equal ensemble size. All three are scored
-against the exact posterior on test log-likelihood, on the direction and size of their miscalibration, and on their
-first two moments.
+Bayesian neural networks (BNNs) offer a more direct one. By placing a posterior over the network's weights, a BNN adds
+to its predictive an epistemic term, the uncertainty about the network itself, which should be large when the training
+set is small and shrink as it grows \citep{kendall2017uncertainties}. Two recent studies have compared BNNs with NPE.
+\citet{delaunoy2024lowbudget} make the NPE flow itself Bayesian and find it conservative down to very small budgets,
+where NPE is over-confident, although it becomes accurate more slowly than NPE as the budget grows.
+\citet{poh2025lensing}, working with several hundred thousand simulations, find NPE more accurate and better calibrated
+than their BNN, which is under-confident. In both studies the BNN is fitted by variational inference, and neither
+compares the results with a reference posterior. It therefore remains open how a BNN whose posterior is sampled rather
+than approximated would fare against NPE, and how close either comes to the true posterior.
 
-\paragraph{Contributions.}
-(i) A comparison in which every method is a 12-member ensemble and the BNN's own networks, trained without sampling,
-serve as a control, so that the effects of ensembling and of sampling the weights are separated. Against a single
-flow the BNN has the lower NLL at every $n$; at $n\le100$ this advantage is an ensembling effect
-(Section~\ref{sec:res_single}). (ii) Sampling improves on the same networks without sampling in two ways. At small $n$ it makes the result
-consistent across training sets: the standard deviation of the test NLL over repeats is 3--4 times smaller. At large
-$n$ it also lowers the average NLL, from $n=5{,}000$, or from $n=500$ with a tempered likelihood. These are the sizes at
-which the BNN beats a 12-flow NPE ensemble, by 0.11--0.13 nats at $n=10{,}000$ even against an NPE trained to
-convergence. This is the opposite of the large-budget
-behaviour reported for variational BNNs \citep{delaunoy2024lowbudget,poh2025lensing} (Section~\ref{sec:res_ens}). (iii) At
-$n\le100$ the NPE ensemble matches or beats every BNN. The only BNN better than NPE at $n=50$ owes its gain to its
-prior scale, not to sampling. The BNN is, however, more reliable: its NLL varies 3--6 times less over training sets
-than NPE's, and it is almost never badly over-confident (Section~\ref{sec:res_ens}). (iv) Under a $\mathcal N(0,1)$ prior,
-sampling makes the predictive 2.4 times wider than its errors warrant at $n=50$, almost entirely in the aleatoric
-term. A prior scale chosen without training data removes the excess, and the same scale follows from a prior-only
-coherence condition on the training inputs. Tempering lowers the NLL without narrowing the predictive at $n=50$.
-Empirical Bayes collapses at $n=50$ to a nearly constant predictor, consistent with the marginal likelihood's
-underfitting bias at small $n$ \citep{lotfi2022bayesian} (Section~\ref{sec:variants}, Appendices~\ref{app:width} and~\ref{app:eb}).
+Sampling BNN posteriors by Markov chain Monte Carlo (MCMC) has long been considered impractical, because posteriors
+over network weights are high-dimensional and multimodal \citep{papamarkou2022challenges,izmailov2021bnn}.
+Microcanonical Langevin Ensembles (MILE) have recently made it practical at moderate cost \citep{sommer2025mile}. MILE
+first trains a deep ensemble, a set of independently trained networks, and then starts a short Microcanonical Langevin
+Monte Carlo (MCLMC) chain \citep{robnik2024mclmc} from each member. This construction affects how a MILE BNN should be
+evaluated. Deep ensembles, which average the predictions of their members, are themselves the standard non-Bayesian
+way to obtain epistemic uncertainty, and they can be read as an approximation to Bayesian model averaging
+\citep{lakshminarayanan2017ensembles,wilson2020bayesian}. A MILE BNN is therefore both an ensemble and a sampler, and
+comparing it with a single network credits sampling with improvements that ensembling alone would provide. To isolate
+what sampling contributes, the baselines have to be ensembled to the same size, and the comparison needs a control made
+of the BNN's own networks without sampling.
 
-Section~\ref{sec:background} reviews SBI, BNNs, MILE and tempering; Section~\ref{sec:data} defines the task and its
-exact posterior; Sections~\ref{sec:methods} and~\ref{sec:eval} give the methods and the evaluation protocol;
-Section~\ref{sec:experiments} reports the experiments and Section~\ref{sec:discussion} discusses them. The appendices
-hold the derivations, implementation details, further prior and sampler variants, the full convergence diagnostics and
-the reproduction commands. A second task, a fixed Gaussian-process surface on which the epistemic term has its own
-exact target, is treated in a separate note.
+\paragraph{Question.} \emph{Do BNNs sampled with MILE perform better than NPE when the simulation budget is small?}
+We study this question on a toy version of cosmological field inference for which the exact posterior is available
+(Section~\ref{sec:why_task}). The task is to infer the amplitude and length scale of a radial basis function (RBF)
+kernel, which together set the power spectrum of a Gaussian field, from the empirical covariance of ten noisy draws of
+the field. We train three methods on 50 to 10{,}000 simulations, each as a 12-member ensemble. The first is a BNN
+sampled with MILE, the second is NPE, and the third is a Gaussian predictor, which consists of the BNN's own networks
+trained to convergence and not sampled. Comparing the BNN with the Gaussian predictor isolates what sampling adds, and
+comparing it with NPE compares the two approaches at equal ensemble size. All methods are scored mainly by the test
+negative log-likelihood (NLL) of the true parameter, which does not require the posterior. We use the exact posterior
+in the appendices to check each method's mean, width and calibration, and to examine how the BNN divides its
+uncertainty into aleatoric (irreducible) and epistemic parts.
+
+\paragraph{Contributions.} Our first contribution is the comparison itself, in which every method is ensembled to the
+same size so that the effects of ensembling and of sampling can be told apart. Against a single network the BNN is
+better at every budget, but at small budgets ensembling the baselines removes most of that advantage
+(Sections~\ref{sec:res_single} and~\ref{sec:res_ens}). Second, we find that at small budgets the BNN does not beat an
+NPE ensemble on average, but it is the more reliable estimator. Its test NLL varies several times less from one
+training set to the next, and it is never badly over-confident. We argue that this reliability is what matters when an
+estimator is trained once and applied to a single observation (Section~\ref{sec:disc_answer}). At large budgets the
+BNN also wins on average, which is the opposite of what has been reported for variational BNNs. Third, under MILE's
+default prior the BNN is too wide at small budgets, and almost all of the excess lies in its aleatoric term. The exact
+posterior shows that this extra width is not irreducible noise, and we interpret it as epistemic uncertainty, caused by
+a misspecified prior, that the network reports as aleatoric (Sections~\ref{sec:variants}
+and~\ref{sec:disc_aleatoric}). Finally, the scale and the form of the prior matter at different budgets. A prior scale
+chosen without training data removes most of the excess width and helps most at the smallest budgets, while tempering
+the likelihood helps most at intermediate ones. This pattern is consistent with a prior whose scale can be set
+correctly but whose isotropic Gaussian form is misspecified (Section~\ref{sec:disc_adjust}).
 
 \section{Background}
 \label{sec:background}
@@ -148,8 +141,8 @@ A simulator defines a prior $p(\theta)$ and a way to draw data $x\sim p(x\mid\th
 intractable; the goal is the posterior $p(\theta\mid x)\propto p(x\mid\theta)\,p(\theta)$ for an observed $x$
 \citep{cranmer2020frontier}. Neural posterior estimation \citep{papamakarios2016fast} fits a conditional density
 $q_\phi(\theta\mid x)$ to simulated pairs $(\theta_i,x_i)\sim p(\theta)\,p(x\mid\theta)$ by maximizing
-$\sum_i\log q_\phi(\theta_i\mid x_i)$. In expectation this objective equals
-$-\mathbb{E}_{p(x)}\,\mathrm{KL}\big(p(\theta\mid x)\,\|\,q_\phi(\theta\mid x)\big)$ up to a constant, so a
+$\sum_i\log q_\phi(\theta_i\mid x_i)$. In expectation this objective equals the negative
+expected Kullback--Leibler (KL) divergence $-\mathbb{E}_{p(x)}\,\mathrm{KL}\big(p(\theta\mid x)\,\|\,q_\phi(\theta\mid x)\big)$ up to a constant, so a
 sufficiently flexible $q_\phi$ recovers the posterior, for every $x$ at once (amortization). The usual family is a
 normalizing flow, e.g.\ a masked autoregressive flow, ``a stack of autoregressive models, each modelling the
 random numbers of the next'' \citep{papamakarios2017maf}.
@@ -159,9 +152,11 @@ uncertainty of its own: the estimator reports a single density whatever $n$ is. 
 overconfident posterior approximations'', and ensembles of estimators are more reliable
 \citep{hermans2022trust}. Evaluation matters as much as the algorithm, since ``the choice of performance metric is
 critical'' \citep{lueckmann2021benchmark}. Without the true posterior, calibration is tested from samples:
-simulation-based calibration checks the ranks of true parameters among posterior draws \citep{talts2018sbc}, and
-TARP is a coverage test that is necessary and sufficient for an accurate estimator \citep{lemos2023tarp}. Here
-the true posterior is available (Section~\ref{sec:reference}), so estimators are also compared with it directly.
+simulation-based calibration (SBC) checks the ranks of true parameters among posterior draws \citep{talts2018sbc}, and
+TARP (Tests of Accuracy with Random Points) is a coverage test that is necessary and sufficient for an accurate
+estimator \citep{lemos2023tarp}. Here the true posterior is available (Section~\ref{sec:reference}). The main
+comparison does not need it, since the test NLL uses only the true parameter; the appendices use it to compare each
+estimator's moments, width and calibration with the posterior directly.
 
 \subsection{Bayesian neural networks and deep ensembles}
 \label{sec:bg_bnn}
@@ -171,8 +166,9 @@ the posterior predictive
 p(y\mid x,\mathcal{D})=\int p(y\mid x,\mathbf w)\,p(\mathbf w\mid\mathcal{D})\,\mathrm{d}\mathbf w,\qquad
 p(\mathbf w\mid\mathcal{D})\propto p(\mathcal{D}\mid\mathbf w)\,p(\mathbf w)
 \end{equation}
-\citep{neal1996bayesian,mackay1992practical}. With a heteroskedastic likelihood the predictive variance splits into an
-aleatoric and an epistemic part (Eq.~\eqref{eq:decomp}); how the BNN's split behaves on this task is examined in
+\citep{neal1996bayesian,mackay1992practical}. With a heteroskedastic likelihood, one whose predicted
+width depends on the input, the predictive variance splits into an aleatoric part, the expected predicted noise, and an
+epistemic part, the spread of the predicted means over the posterior (Eq.~\eqref{eq:decomp}); how the BNN's split behaves on this task is examined in
 Appendix~\ref{app:width}.
 
 A non-Bayesian alternative is the deep ensemble: independently trained networks averaged at prediction, which is
@@ -185,14 +181,15 @@ from that of ensembling.
 \subsection{Sampling BNN posteriors with MILE}
 \label{sec:bg_sampling}
 \label{sec:mile}
-Markov chain Monte Carlo targets $p(\mathbf w\mid\mathcal{D})$ exactly in the limit, but BNN posteriors are
+MCMC targets $p(\mathbf w\mid\mathcal{D})$ exactly in the limit, but BNN posteriors are
 high-dimensional, multimodal and non-identifiable: permuting hidden units or rescaling between layers leaves the
 function unchanged. \citet{papamarkou2022challenges} trace the resulting obstacles to a ``lack of convergence to the
 parameter posterior'', yet show that a non-converged chain ``can yield via Bayesian marginalization a valuable posterior
-predictive distribution''. Full-batch HMC chains \citep{izmailov2021bnn} disagree in weight space but mostly agree in
+predictive distribution''. Full-batch Hamiltonian Monte Carlo (HMC) chains \citep{izmailov2021bnn} disagree in weight space but mostly agree in
 function space, and \citet{sommer2024connecting} propose Bayesian deep ensembles, chains initialized at the members of a
 deep ensemble, since ``multiple samples from multiple chains improve predictive performance and uncertainty
-quantification''. Cost is the other obstacle: NUTS ``often requires more than 90k leapfrog steps/gradient evaluations for
+quantification''. Cost is the other obstacle: the No-U-Turn Sampler (NUTS),
+the adaptive form of HMC, ``often requires more than 90k leapfrog steps/gradient evaluations for
 warmup in BNN tasks'' \citep{sommer2025mile}.
 
 MCLMC \citep{robnik2024mclmc} samples with a unit-speed velocity whose dynamics leave the target invariant for any noise
@@ -204,17 +201,19 @@ error of the Monte Carlo predictive
 \begin{equation}
 \label{eq:mc_predictive}
 p(\mathbf{y}^\ast\mid\mathbf{x}^\ast,\mathcal{D})\approx\frac{1}{KS}\sum_{k=1}^{K}\sum_{s=1}^{S}
-p\big(\mathbf{y}^\ast\mid\mathbf{x}^\ast,\boldsymbol\theta^{(k,s)}\big)
+p\big(\mathbf{y}^\ast\mid\mathbf{x}^\ast,\mathbf w^{(k,s)}\big)
 \end{equation}
 into initialization, discretization and Monte Carlo error. Against the first, $K$ networks are optimized independently
 (a deep ensemble, \citealp{lakshminarayanan2017ensembles}; AdamW with early stopping) and chain $k$ starts from member
 $k$, so the ensemble explores across modes and each chain explores its own. Against the second, the initial step size is
 the optimizer's learning rate and the EEVPD target is annealed linearly from 0.5 to 0.1 over the first tuning phase;
-$L$ is then set from the chain's variance and its effective sample size (target 100). Against the third, a fixed budget
+$L$ is then set from the chain's variance and its effective sample size (ESS; target 100). Against the third, a fixed budget
 per chain: $40{,}000/5{,}000/5{,}000$ steps in the three tuning phases, then 10{,}000 sampling steps thinned by 10 to
 $S=1{,}000$ draws. Defaults are $K=12$ and an isotropic $\mathcal{N}(0,1)$ prior on all weights. MILE drops the Metropolis
 correction deliberately and does not claim convergence: short chains, no correction and ensemble initialization ``will
-induce a bias in the sampling distribution''; its authors report a chain-wise split $\widehat R$ on the weights above
+induce a bias in the sampling distribution''; its authors report a chain-wise split $\widehat R$ (the potential scale reduction factor, which compares the
+variance between chains with that within them and is 1 for chains that agree; Section~\ref{sec:convdiag}) on the
+weights above
 the 1.1 and 1.01 cutoffs and justify the method by predictive performance \citep[App.~A.3]{sommer2025mile}.
 The Gaussian predictor used here as a control is MILE's first stage alone: the same $K=12$ networks, with the same
 seeds, data and hyperparameters, optimized but not sampled. Its networks are trained to convergence, whereas the BNN's
@@ -223,10 +222,12 @@ predictor differ in the sampling stages and in how long the starting networks we
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth, trim=0.8cm 0.25cm 0.7cm 0.1cm, clip]{figures/project_summary/mile/sommer2025_fig1_mile_flowchart.pdf}
+\includegraphics[width=\textwidth]{figures/project_summary/mile/mile_flowchart_ournotation.pdf}
 \caption{The MILE procedure: optimization of $K$ ensemble members, MCLMC warmup and tuning (phases I--III,
-step counts annotated), and sampling; quantities carried between stages are circled. Reproduced from
-\citet[Fig.~1]{sommer2025mile} under CC BY 4.0.}
+step counts annotated), and sampling. The quantities carried between stages are circled: the optimized weights
+$\mathbf w^{\ast(k)}$ of member $k$, and the step size $\epsilon^{(k)}$, decoherence length $L^{(k)}$ and initial
+state $\mathbf w^{(k,0)}$ of its chain. Adapted from \citet[Fig.~1]{sommer2025mile} under CC BY 4.0, redrawn with
+this report's notation ($\mathbf w$ for network weights, $\theta$ for the inferred parameters).}
 \label{fig:mile}
 \end{figure}
 
@@ -263,11 +264,12 @@ The temperature acts only in the MCLMC target, during warmup and sampling; pretr
 so the test NLL of a tempered BNN is directly comparable with that of the other methods (Appendix~\ref{app:bg}).
 
 \textbf{The cold posterior effect.} \citet{wenzel2020cold} find that predictive performance of deep BNNs is
-best at $T<1$ (for a CNN-LSTM on IMDB, roughly $0.01<T<0.2$), and state that they ``are not aware of any published
+best at $T<1$ (for a convolutional and long short-term memory network,
+CNN-LSTM, on the IMDB movie-review sentiment task, roughly $0.01<T<0.2$), and state that they ``are not aware of any published
 work demonstrating well-performing Bayesian deep learning at temperature $T=1$''. Proposed explanations include
 data augmentation, under which \citet{izmailov2021bnn} find tempering ``not needed for near-optimal performance'',
 and prior misspecification: heavy-tailed weight priors remove the effect in fully connected classifiers on
-MNIST and FashionMNIST, though not in convolutional or residual networks \citep{fortuin2022priors}.
+the MNIST and FashionMNIST image datasets, though not in convolutional or residual networks \citep{fortuin2022priors}.
 \citet{noci2021disentangling} report that the effect ``becomes stronger for smaller dataset size $n$'', since ``the
 relative influence of the prior over the likelihood increases with decreasing dataset size''. The task here has
 no data augmentation and is studied precisely at small $n$, where these accounts predict the effect to be strongest
@@ -281,26 +283,30 @@ MacKay's condition $\hat\tau^2=\lVert\mathbf m\rVert^2/\gamma$, with $\mathbf m$
 ``the number of good parameter measurements'' \citep{mackay1992practical,mackay1992thesis}. MacKay himself uses separate
 scales for hidden weights, hidden biases and output weights, since forcing one decay rate on all of them is
 ``inconsistent'' \citep{mackay1992thesis}. With a sampled posterior the expectations are Monte Carlo estimates:
-stochastic-approximation updates with decreasing steps alternate with SG-MCMC in \citet{deng2019adaptive}, and the same
+stochastic-approximation updates with decreasing steps alternate with stochastic-gradient MCMC (SG-MCMC) in \citet{deng2019adaptive}, and the same
 update, estimated from posterior samples, oscillates or diverges when applied per layer \citep{antoran2023sampling}. The
 marginal likelihood also ``has a bias towards underfitting'' that weakens as data grow \citep{lotfi2022bayesian}, which
 matters most at the smallest $n$. A data-free alternative chooses the $\tau$ whose prior predictive covers the
 simulator's parameters with calibrated coverage, a single-scale version of the prior optimization of
-\citet{delaunoy2024lowbudget}; it needs simulated pairs, here 1,000 outside the training budget. A condition that needs
+\citet{delaunoy2024lowbudget}; it needs simulations outside the training budget, here 3{,}000: 1{,}000 pairs scored for coverage and 2{,}000 for
+standardizing the inputs. A condition that needs
 none follows from the law of total variance: any coherent posterior satisfies
 $\mathbb E_x[\operatorname{Var}(\theta\mid x)]+\operatorname{Var}_x(\mathbb E[\theta\mid x])=\operatorname{Var}(\theta)$,
 the second moment of the self-consistency that simulation-based calibration tests \citep{talts2018sbc}, and requiring
 it of the untrained network on the $n$ training inputs fixes $\tau$ from the prior's moments alone. All three fit the
 network's prior predictive to the simulator's joint distribution. For the first two, a well-specified model should
-select the same scale (derivation and caveats in Appendix~\ref{app:bg}); on this task all three agree at
-$n=100$--$1{,}000$ (Section~\ref{sec:bnn_datafree}, Appendix~\ref{app:eb}).
+select the same scale (derivation and caveats in Appendix~\ref{app:bg}); on this task all three roughly agree,
+within about 12\%, at $n=100$--$1{,}000$ (Section~\ref{sec:bnn_datafree}, Appendix~\ref{app:eb}). Agreement fixes the
+scale within the isotropic Gaussian family, so the scale is well specified relative to MILE's default
+$\mathcal N(0,1)$; it does not test whether an isotropic Gaussian is the right form of prior
+(Section~\ref{sec:disc_adjust}).
 
 \section{The RBF-kernel inference task}
 \label{sec:data}
 
 \subsection{Simulator}
 \label{sec:simulator}
-The parameter $\theta=(\sigma,\rho)$ is the amplitude and lengthscale of a squared-exponential (RBF)
+The parameter $\theta=(\sigma,\rho)$ is the amplitude and length scale of a squared-exponential (RBF)
 kernel \citep{rasmussen2006gpml}, with independent truncated-normal priors
 \begin{equation}
 \sigma\sim\mathcal{N}(1.25,\,0.3^2)\big|_{\sigma>0},\qquad \rho\sim\mathcal{N}(0.60,\,0.2^2)\big|_{\rho>0}
@@ -314,7 +320,7 @@ x_i\overset{\text{iid}}{\sim}\mathcal{N}(0,\,C_\theta),\qquad
 \end{equation}
 Every method sees only the empirical covariance $S=X^\top X/N$ ($X\in\mathbb{R}^{N\times D}$), flattened
 to 100 numbers (55 distinct). Since the $x_i$ are zero-mean Gaussian, $S$ is sufficient for $\theta$, so
-the summary loses no information. Figure~\ref{fig:simulator} shows draws and $S$ at three lengthscales.
+the summary loses no information. Figure~\ref{fig:simulator} shows draws and $S$ at three length scales.
 
 \begin{figure}[h]
 \centering
@@ -343,7 +349,7 @@ width grows with the parameter itself (correlation of posterior std with the tru
 0.56, 5--95\% 0.44--0.65), so a predictive with independent marginals is misspecified here. The marginals
 are mildly skewed (median skewness 0.42 for $\sigma$, 0.14 for $\rho$). As a check, the reference is
 calibrated on the test set, as it must be when $\theta$ is drawn from the prior: the standardized error
-$(\theta^*-\mathbb{E}[\theta\mid S])/\mathrm{sd}[\theta\mid S]$ has standard deviation 1.02 / 0.97, and
+$(\mathbb{E}[\theta\mid S]-\theta^*)/\mathrm{sd}[\theta\mid S]$ has standard deviation 1.02 / 0.97, and
 69\% / 71\% of truths lie within one posterior standard deviation. It also satisfies the law-of-total-variance
 condition of Section~\ref{sec:bg_eb}: the mean posterior variance plus the variance of the posterior mean is 0.0939
 for $\sigma$ and 0.0379 for $\rho$, against test-set variances of $\theta^*$ of 0.0935 and 0.0376.
@@ -384,14 +390,16 @@ and row order.
 \label{sec:why_task}
 
 \paragraph{The exact posterior is known for every test dataset.}
-Because $S$ is sufficient and $p(S\mid\theta)$ is Gaussian in closed form (Section~\ref{sec:reference}), each
-method is scored against $p(\theta\mid S)$ itself on all 1{,}000 test datasets, not only against the simulated
-$\theta^\ast$. Calibration tests that use only $\theta^\ast$ (TARP, SBC) are passed by the prior: a predictive
+Because $S$ is sufficient and $p(S\mid\theta)$ is Gaussian in closed form (Section~\ref{sec:reference}),
+$p(\theta\mid S)$ itself is available on all 1{,}000 test datasets. The main comparison does not need it: methods are
+scored mainly on the test NLL, which uses only the simulated $\theta^\ast$ (Section~\ref{sec:metrics}). The exact
+posterior serves the appendices. Calibration tests that use only $\theta^\ast$ (TARP, SBC) are passed by the prior: a predictive
 equal to $p(\theta)$ has exact coverage when $\theta^\ast$ is drawn from it. They detect a predictive that is too
 narrow or too wide on average, but not how much wider than the posterior a calibrated predictive is. With the exact
 posterior, each method's mean and width are compared with the posterior's, and the width warranted by the
-method's own mean error is computable (Appendix~\ref{app:width}). Both questions of this report, whether a BNN
-beats NPE at small $n$ and whether the width it adds there is warranted, need that target.
+method's own mean error is computable, and the BNN's split into aleatoric and epistemic uncertainty can be checked
+(Appendices~\ref{app:width} and~\ref{app:moments}). Of the two questions of this report, whether a BNN beats NPE at
+small $n$ is answered by the test NLL; whether the width it adds there is warranted needs the exact posterior.
 
 \paragraph{The posterior width varies across datasets.}
 Over the central 90\% of test datasets the posterior standard deviation ranges from 0.121 to 0.169 for $\sigma$ and
@@ -423,17 +431,19 @@ method that returns the prior is far from the target, and a method's width at sm
 information in $S$ it has learned.
 
 \paragraph{Precedent.}
-Inferring the amplitude and lengthscale of a squared-exponential covariance from Gaussian-process data is a
+Inferring the amplitude and length scale of a squared-exponential covariance from Gaussian-process data is a
 long-standing problem with a closed-form likelihood. \citet{williams1996gp} fit these hyperparameters by
 optimization or average over them with hybrid Monte Carlo, \citet{neal1997mc} samples them with Markov chain
 methods, and \citet{rasmussen2006gpml} give the standard treatment. \citet{murray2010slice} illustrate the posterior
-over the lengthscale of a squared-exponential kernel given draws from the prior, the closest classical analogue of
+over the length scale of a squared-exponential kernel given draws from the prior, the closest classical analogue of
 this task. Bayesian inference of covariance parameters is equally established in spatial statistics, for the
 Mat\'ern class \citep{handcock1993bayesian}. Approximate Bayesian computation uses tractable Gaussian processes
-summarized by covariances as test problems: the MA(2) model with autocovariance summaries, compared with
+summarized by covariances as test problems: the
+moving-average model of order 2, MA(2), with autocovariance summaries, compared with
 exact-likelihood contours \citep{marin2012abc}, and an Ornstein--Uhlenbeck process scored against its true posterior
 \citep{chen2021nass}. Recent amortized methods take the same targets: prior-fitted networks are checked against exact
-GP posterior predictives with an RBF kernel \citep{muller2022pfn}, ACE infers the lengthscale and output scale of a
+Gaussian-process (GP) posterior predictives with an RBF kernel \citep{muller2022pfn}, the Amortized Conditioning
+Engine (ACE) infers the length scale and output scale of a
 one-dimensional GP \citep{chang2024ace}, \citet{bitzer2023amortized} amortize type-II maximum likelihood for kernels
 built from squared-exponential components, and \citet{zammitmangion2024neural} compare amortized posterior methods,
 including a normalizing-flow NPE, with MCMC on a Gaussian-process length scale over 1{,}000 test datasets. None of
@@ -459,13 +469,15 @@ such as $S$ is no longer available.
 
 \paragraph{Limitations.}
 The tractable likelihood is what provides the exact reference and is the point of the task, not a limitation. The
-main limitation is dimension: $\theta$ has two components and each dataset 55 distinct numbers, whereas analyses of
+main limitation is that all results come from this single task (Section~\ref{sec:disc_limits}). Its dimension is also
+small: $\theta$ has two components and each dataset 55 distinct numbers, whereas analyses of
 cosmological fields infer more parameters from far larger data, and how the comparison changes with the dimension
 of $\theta$ and of the data is not tested. The summary is fixed and sufficient, so the methods are compared as
 posterior estimators only; on fields, a summary or encoder must also be learned \citep{makinen2021lossless}, and how
 that interacts with sampling the network's weights is not addressed. The posteriors have moderate dependence and
-skew but are close to Gaussian, which favours the Gaussian heads of the BNN and the Gaussian predictor over NPE's
-flow. This is also the regime of well-constrained cosmological parameters, whose posteriors from Planck ``can be well
+skew but are close to Gaussian. This does not favour the Gaussian heads of the BNN and the Gaussian predictor: NPE
+with a bivariate Gaussian head in place of its flow is worse than with the flow (Appendix~\ref{app:npe_variants}).
+Near-Gaussian posteriors are also the regime of well-constrained cosmological parameters, whose posteriors from Planck ``can be well
 approximated as Gaussian for $\Lambda$CDM, as well as for many one- and two-parameter extensions''
 \citep{huang2019correlations}; strongly non-Gaussian posteriors, which arise there for curvature, the dark-energy
 equation of state or parameters bounded at zero \citep{huang2019correlations}, are not covered. The design is otherwise fixed: one kernel
@@ -556,8 +568,8 @@ effect of ensembling (Section~\ref{sec:intro}).
 A conditional masked autoregressive flow \citep{papamakarios2017maf} in \code{nflows} \citep{durkan2020nflows},
 trained as a neural posterior estimator \citep{papamakarios2016fast}. A context encoder
 $g:\mathbb{R}^{100}\to\mathbb{R}^{8}$ (layers $100\to16\to16\to8$, ReLU) summarizes $S$. The flow maps a
-standard normal on $\mathbb{R}^2$ through two blocks, each a masked affine autoregressive transform (a MADE
-with 16 hidden units, one residual block, ReLU, conditioned on $g(S)$, scale $\mathrm{softplus}(\cdot)+\varepsilon$)
+standard normal on $\mathbb{R}^2$ through two blocks, each a masked affine autoregressive transform (a masked
+autoencoder for distribution estimation, MADE, with 16 hidden units, one residual block, ReLU, conditioned on $g(S)$, scale $\mathrm{softplus}(\cdot)+\varepsilon$)
 followed by reversing the variable order, so each parameter is transformed conditional on the other in one
 of the two blocks. 3{,}920 parameters in total (encoder 2{,}024, flow 1{,}896). Training maximizes
 $\sum_i\log q(\theta_i\mid S_i)$ with Adam \citep{kingma2015adam} and coupled ($L_2$) weight decay at a per-size
@@ -593,7 +605,7 @@ run). This long-trained ensemble is the NPE comparator at $n=10{,}000$ wherever 
 layers of width 16, the soft-sign activation $x/(1+|x|)$ on every hidden layer, and a linear output layer:
 $100\to16\to16\to16\to5$, $d=2{,}245$ weights and biases. Soft-sign is used because \code{bde} offers no
 $\tanh$; it is smooth and saturating like $\tanh$, with heavier tails. The five outputs parameterize the
-bivariate normal of Eq.~\eqref{eq:biv} ($\kappa=1$) in standardized units.
+bivariate normal of Eq.~\eqref{eq:biv} in standardized units.
 
 \textbf{Likelihood, prior, posterior.} With $\tilde S_i,\tilde\theta_i$ the standardized training pairs,
 \begin{equation}
@@ -620,9 +632,11 @@ diagnostics uninterpretable \citep{izmailov2021bnn,sommer2024connecting}.
 The prior is $\mathcal{N}(0,\tau^2)$ on every weight and bias with $\tau=0.3655$, chosen before any training data are
 seen. The prior predictive of the untrained network, with weights and biases drawn from $\mathcal{N}(0,\tau^2)$, is
 scored by TARP coverage \citep{lemos2023tarp} on 1{,}000 simulated pairs $(\theta,x)$ drawn independently of the
-canonical dataset, with 1{,}000 weight draws; inputs are standardized by the mean and standard deviation of 2{,}000
-further simulated $x$, and outputs are mapped to $\theta$ with the prior mean and standard deviation. $\tau$ minimizes
-the absolute area between the coverage curve and the diagonal, $\big|\int(\mathrm{ECP}(\alpha)-\alpha)\,\mathrm{d}\alpha\big|$,
+canonical dataset (the same pairs in every trial), with 1{,}000 weight draws; inputs are standardized by the mean and standard deviation of 2{,}000
+further simulated $x$, and outputs are mapped to $\theta$ with the prior mean and standard deviation. With
+$\mathrm{ECP}(\alpha)$ the expected coverage probability, the fraction of datasets whose true parameter lies inside
+TARP's credible region at credibility level $\alpha$, which equals $\alpha$ for a calibrated estimator
+(Appendix~\ref{app:moments}), $\tau$ minimizes the absolute area between the coverage curve and the diagonal, $\big|\int(\mathrm{ECP}(\alpha)-\alpha)\,\mathrm{d}\alpha\big|$,
 by Bayesian optimization (\code{scikit-optimize}, Gaussian-process surrogate, expected improvement, 40 trials,
 $\tau$ log-uniform on $[10^{-3},3]$). This is a single-scale version of the prior optimization of
 \citet{delaunoy2024lowbudget}; it uses 3{,}000 simulations outside the training budget but no training pairs.
@@ -694,19 +708,20 @@ periodic re-tuning of $(\epsilon,L)$ during sampling and the block update of the
 
 \subsection{Hyperparameter selection}
 \label{sec:hp}
-For each method and training size, the learning rate and weight decay are chosen by Bayesian optimization
-\citep{snoek2012practical}: \code{scikit-optimize} 0.10.2, a Gaussian-process surrogate with expected
+Only the learning rate and weight decay are searched, per method and training size; MILE's sampler settings are its
+defaults. NPE's are chosen by Bayesian optimization \citep{snoek2012practical}: \code{scikit-optimize} 0.10.2, a Gaussian-process surrogate with expected
 improvement, log-uniform search ranges $\mathrm{lr}\in[10^{-5},10^{-1}]$ and $\mathrm{wd}\in[10^{-7},10^{-2}]$,
 10 random initial points, random state 123, and a wall-clock budget per size. The objective is the validation NLL on an 80/20
-split of the repeat-0 training rows. This applies to NPE. The BNN and the Gaussian predictor share one pair per size,
+split of the repeat-0 training rows. Within its budget the search ran 3--20 trials per size and acted as a random search
+of 3--10 points (Appendix~\ref{app:hp}). The BNN and the Gaussian predictor are not tuned by Bayesian optimization: they
+share one pair per size,
 chosen on a grid for the BNN's network as a standalone predictor: one network pretrained exactly as in
 Section~\ref{sec:impl}, without sampling, scored by its NLL on 1{,}000 held-out pool rows averaged over the training
 sets of repeats 0--2. The grid has 17 learning rates from $10^{-5}$ to $10^{-1}$ in quarter decades and 15 weight decays
 from $10^{-7}$ to $1$ in half decades (the upper bound is raised from $10^{-2}$ because AdamW's decoupled decay is
 nearly inert below it at these learning rates), and the argmin is used at every size. At $n=50$ the argmin is
 noise-driven, and at its learning rate two of the three grid fits stop at the 2{,}000-step cap. The converged Gaussian
-predictor keeps these values, which were chosen under the 2{,}000-step budget. Only these two hyperparameters are
-searched; MILE's sampler settings are its defaults. Search details, budgets and rationale, including the earlier BNN
+predictor keeps these values, which were chosen under the 2{,}000-step budget. Search details, budgets and rationale, including the earlier BNN
 search on the full MILE fit that this grid supersedes: Appendix~\ref{app:hp}.
 
 \begin{table}[h]
@@ -734,9 +749,9 @@ variants and to the Gaussian predictor (capped and converged).}
 \label{sec:compute}
 All fits ran on the Perlmutter system of the National Energy Research Scientific Computing Center (NERSC), one
 NVIDIA A100 GPU (40 or 80\,GB) per Slurm job. For one training set, a 12-chain BNN under stock MILE takes 36--72\,s of
-wall time (fitting and prediction; the 12 chains run in parallel on the GPU), the re-tuning sampler 410--530\,s, the
-converged 12-network Gaussian predictor 24--82\,s, and the 12-flow NPE ensemble 160--240\,s at $n\le1{,}000$ and
-660--910\,s at $n\ge5{,}000$; Appendix~\ref{app:hp} gives the settings per model and Appendix~\ref{app:repro} the
+wall time (fitting and prediction; the 12 chains run in parallel on the GPU), the re-tuning sampler 411--534\,s, the
+converged 12-network Gaussian predictor 24--82\,s, and the 12-flow NPE ensemble 157--238\,s at $n\le1{,}000$ and
+663--907\,s at $n\ge5{,}000$; Appendix~\ref{app:hp} gives the settings per model and Appendix~\ref{app:repro} the
 software versions; the code is at \url{https://github.com/sam-dowd/rbf-sbi-bnn}. The code, analysis scripts and text of this report were developed with the assistance of Claude
 models (Anthropic), most recently Claude Opus 5.5, used through Claude Code; all results were checked by the author.
 
@@ -752,7 +767,10 @@ All metrics are computed on the $M=1{,}000$ test datasets $(S_j,\theta^\ast_j)$.
 \label{eq:nll}
 \mathrm{NLL}=-\frac1M\sum_{j=1}^{M}\log q(\theta^\ast_j\mid S_j)\quad\text{(nats, joint over }(\sigma,\rho)\text{)},
 \end{equation}
-which rewards accuracy and penalizes miscalibration in either direction. Each method's $q$ is a normalized
+in nats (natural-log units). It needs only the true parameter $\theta^\ast_j$, not the exact posterior. It rewards
+accuracy and penalizes miscalibration in either direction, but over-confidence much more than conservatism: a width
+that is too narrow enters through the squared standardized error, one that is too wide only through its logarithm.
+That asymmetry suits scientific use, where a conservative posterior is the safer error (Section~\ref{sec:intro}). Each method's $q$ is a normalized
 density on $\theta$ in original units, evaluated exactly at $\theta^\ast_j$: the mixture of the 12 networks' Gaussians
 for the Gaussian predictor (one Gaussian for a single network), the equal-weight mixture over all $KS$ draws for the
 BNN, the flow's change-of-variables density for a single flow and the mixture of the 12 flows' densities for the NPE
@@ -766,21 +784,34 @@ percentage of test datasets with $|z_{j,p}|>3$ for $\sigma$ or $\rho$ counts the
 too narrow for its own error. The exact posterior scores 0.9\%, somewhat more than the 0.5\% of a Gaussian, since its
 posteriors are not exactly Gaussian.
 
-\textbf{Further metrics}, each defined where it is reported: the error of the predicted mean and of the predicted
-standard deviation against the exact posterior's, the spread of $z$ and TARP calibration (Appendix~\ref{app:moments});
-the width relative to the width warranted by a method's own errors, the coherence ratio and the BNN's
-aleatoric/epistemic split (Appendix~\ref{app:width}); and the decomposition of the BNN's NLL into chains, draws and
+\textbf{Metrics that use the exact posterior.} Four appear in Section~\ref{sec:experiments}; each is defined in full
+where it is reported. The \emph{TARP coverage area} is the integral over credibility levels $\alpha$ of
+$\mathrm{ECP}(\alpha)-\alpha$: 0 for a calibrated predictive, positive for a conservative one, negative for an
+over-confident one (Appendix~\ref{app:moments}). The \emph{width over warranted width} is the RMS predictive width
+divided by the RMS width that a calibrated predictive with the same mean errors would need; 1 is ideal
+(Appendix~\ref{app:width}). The \emph{coherence ratio} is the mean predicted variance plus the variance of the predicted
+means across test datasets, divided by the variance of $\theta^\ast$ over the test set; by the law of total variance
+(Section~\ref{sec:bg_eb}) it is 1 for a coherent predictive (Appendix~\ref{app:width}). The \emph{aleatoric share} is
+the fraction of a BNN's variance in excess of the exact posterior's and of its own mean error that lies in its
+aleatoric term (Eq.~\eqref{eq:decomp}). The appendices add the error of the predicted mean and of the predicted
+standard deviation against the exact posterior's and the spread of $z$ (Appendix~\ref{app:moments}); and the decomposition of the BNN's NLL into chains, draws and
 starting networks (Appendix~\ref{app:inside}). Table~\ref{tab:exactfloor} gives their values for the exact posterior.
 
 \subsection{Convergence diagnostics}
 \label{sec:convdiag}
-Diagnostics are reported, never used to accept or discard a fit; only members with non-finite draws are replaced.
+Diagnostics are reported, never used to accept or discard a fit. The only members removed are those whose draws
+become non-finite. Under stock MILE (the $\nzo$, data-free and tempered BNNs) they are replaced by re-seeded refits on
+the same training rows, so every fit has 12 members (8 of 2{,}136 member fits failed). The re-tuning sampler (the
+$\nzo$ + re-tune and empirical-Bayes models, Appendix~\ref{app:eb}) drops them without replacement, which leaves 9--11
+members in 19 of 60 and 8 of 60 fits respectively.
 BNN weight posteriors are non-identifiable and multimodal, chains started in different modes need not reach a common
-function \citep[Sec.~6.2]{sommer2024connecting}, and MILE claims no convergence \citep[App.~A.3]{sommer2025mile}; the
-criterion here is agreement with the exact posterior. The pipeline diagnostic is the classic potential scale reduction
-factor $\widehat R$ \citep{gelman1992inference} with the effective sample size, as implemented in BlackJAX 1.2.2, on the
+function \citep[Sec.~6.2]{sommer2024connecting}, and MILE claims no convergence \citep[App.~A.3]{sommer2025mile}; fits are judged
+by their test NLL (Section~\ref{sec:metrics}) and, in the appendices, by their agreement with the exact posterior. The pipeline diagnostic is the classic potential scale reduction
+factor (PSRF) $\widehat R$ \citep{gelman1992inference} with the effective sample size, as implemented in BlackJAX 1.2.2, on the
 predicted mean for every (test dataset, parameter) pair with the $K$ members as chains, reported as maximum and mean.
-Appendix~\ref{app:diag} adds rank-normalized pooled and chain-wise $\widehat R$ on the mean, the width and the log density
+Appendix~\ref{app:diag} adds rank-normalized $\widehat R$, both pooled (all members' chains together, so it measures
+whether the members agree) and chain-wise (each chain split into sub-chains, so it measures whether each chain is
+stationary), on the mean, the width and the log density
 at $\theta^\ast$, and the per-member expanding-window LPPD: the test LPPD of a member's predictive built from its first
 $l$ kept draws, as a function of $l$, the per-chain convergence check of \citet[App.~B.2]{sommer2024connecting}.
 
@@ -810,14 +841,14 @@ predicted mean within the saved run's between-chain spread.
 
 \section{Experiments}
 \label{sec:experiments}
-This section reports test NLL, the primary score (Section~\ref{sec:metrics}). Three BNNs are compared, each a
-12-chain MILE fit: under MILE's default $\mathcal N(0,1)$ prior, with the data-free prior scale
-(Section~\ref{sec:bnn_datafree}), and with a tempered likelihood (Section~\ref{sec:bnn_temp}; $T=0.7$, $0.7$, $0.6$
-and $0.7$ at $n=50$--$1{,}000$, chosen on validation data, Appendix~\ref{app:temp_search}; at $n\ge5{,}000$ the best temperature is close to 1, so
-the $\mathcal N(0,1)$ BNN is also the tempered one there, Section~\ref{sec:bnn_temp}). ``The BNN''
-means any of the three. Section~\ref{sec:res_single} compares them with a single network of each baseline, so that the
-BNN differs from its comparator in both sampling and ensembling; Section~\ref{sec:res_ens} compares them with 12-member
-ensembles of the same baselines, so that only sampling differs. Paired differences, the verdict of each BNN against
+This section reports test NLL, the primary score (Section~\ref{sec:metrics}), and in
+Section~\ref{sec:variants} also the width metrics that use the exact posterior. Three BNNs are compared, each a
+12-chain MILE fit, under MILE's default $\mathcal N(0,1)$ prior, with the data-free prior scale
+(Section~\ref{sec:bnn_datafree}) and with a tempered likelihood (Section~\ref{sec:bnn_temp}); ``the BNN'' means any of
+the three. The tempered BNN is run only at $n\le1{,}000$, since at larger $n$ the best temperature is close to 1 and the
+$\mathcal N(0,1)$ BNN is also the tempered one. Section~\ref{sec:res_single} compares the BNNs with a single network of
+each baseline, so that they differ from it in both sampling and ensembling, and Section~\ref{sec:res_ens} compares them
+with 12-member ensembles of the same baselines, so that only sampling differs. Paired differences, the verdict of each BNN against
 each ensemble, the decomposition of the BNN's NLL, calibration and width are in Appendix~\ref{app:final}.
 
 \subsection{Sampling and ensembling together: the BNN against single networks}
@@ -886,7 +917,9 @@ repeats, band $\pm1$ sd over repeats; the long-trained NPE at $n=10{,}000$ as a 
 \label{fig:sec6_ens}
 \end{figure}
 
-Ensembling removes most of that advantage. Twelve flows lower NPE's NLL by about 1 nat at $n=50$ and 0.7 at $n=100$,
+Against these equally ensembled baselines the BNN does not have the lowest average NLL at $n\le100$, but it is the
+most reliable estimator there, and it has the lowest NLL from $n=500$ with a tempered likelihood and from $n=5{,}000$
+without. Ensembling removes most of the single-network advantage. Twelve flows lower NPE's NLL by about 1 nat at $n=50$ and 0.7 at $n=100$,
 and twelve networks lower the Gaussian predictor's by 0.23 at $n=100$, so against equally ensembled baselines the BNN
 no longer wins at small $n$ (Table~\ref{tab:sec6_ens}, Figure~\ref{fig:sec6_ens}).
 
@@ -895,189 +928,223 @@ no longer wins at small $n$ (Table~\ref{tab:sec6_ens}, Figure~\ref{fig:sec6_ens}
 $0.16\pm0.28$ nats on 13 of 20 repeats. All repeats share one test set, whose sampling uncertainty the paired test does
 not include; for this comparison it is about 0.05 nats, comparable to the repeat-to-repeat standard error of 0.06, so the
 difference is marginal, and it comes from the prior rather than from sampling, since this BNN ties its own unsampled
-networks. Neither adjustment rescues $n=100$, where NPE's advantage is in the predicted mean, which neither changes
-(Section~\ref{sec:disc_adjust}).
+networks. Neither adjustment rescues $n=100$. NPE's advantage there is in the predicted mean: the 12-flow ensemble's
+mean error is 0.10 for $\sigma$ and 0.09 for $\rho$, against 0.12--0.13 and 0.10--0.11 for the BNNs
+(Appendix~\ref{app:moments}), and neither adjustment changes the BNN's mean error at $n\le100$ by more than 0.006. The
+advantage in $\sigma$, whose posterior is right-skewed, comes from the flow head: with a bivariate Gaussian head NPE's
+mean error for $\sigma$ at $n=100$ rises to the BNNs' level, 0.126 against 0.096 (Appendix~\ref{app:npe_variants}).
 
-\textbf{Small $n$: the BNN is more reliable.} The NLL of every BNN varies 3--6 times less over training sets than that
-of either ensemble (standard deviation 0.05--0.06 nats at $n\le100$, against 0.16--0.20 for the Gaussian predictor and
+\textbf{Small $n$: the BNN is more reliable.} The NLL of every BNN varies 3--4 times less over training sets than that
+of the Gaussian predictor's ensemble and 3--6 times less than NPE's (standard deviation 0.05--0.06 nats at $n\le100$, against 0.16--0.20 for the Gaussian predictor and
 0.19--0.30 for NPE), and its worst training set is better: at $n=50$ every BNN's worst repeat ($-0.25$ to $-0.48$) is
 below both ensembles' ($-0.08$ and $+0.23$). The ensembles are also badly over-confident on a few percent of test
 datasets at small $n$, 2--3\% in the median repeat at $n=50$ and up to 7.7\% in the worst, whereas no BNN exceeds 0.3\%
 in the median repeat, below the exact posterior's own 0.9\% (lower block of Table~\ref{tab:sec6_ens}). The
 Gaussian predictor is the same 12 networks without sampling, and its capped version, from which the chains start,
-varies as much over training sets (Appendix~\ref{app:inside}), so the gain in reliability is due to sampling. With the
-data-free scale the BNN is also as well calibrated as NPE at $n=50$; under $\mathcal N(0,1)$ and tempering it is
-conservative (Figure~\ref{fig:tarp_ens}).
+varies as much over training sets (Section~\ref{sec:res_inside}), so the gain in reliability is due to sampling. It
+is not the product of a wide predictive: with the data-free scale the BNN at $n=50$ is calibrated (TARP coverage area
+$+0.003$, against $+0.014$ for NPE) and its width is 1.15 / 1.20 times the one its own errors warrant
+(Appendix~\ref{app:width}). Under $\mathcal N(0,1)$ and tempering it is conservative (TARP coverage area $+0.05$ under
+$\mathcal N(0,1)$; Figure~\ref{fig:tarp_ens}).
 
-\textbf{Large $n$.} From $n=5{,}000$ both untempered BNNs have the lower NLL (at these sizes the $\mathcal N(0,1)$ BNN is also, approximately,
+\textbf{Large $n$: the BNN wins on average.} From $n=5{,}000$ both untempered BNNs have the lower NLL (at these sizes the $\mathcal N(0,1)$ BNN is also, approximately,
 the optimally tempered one; Section~\ref{sec:bnn_temp}): by 0.13--0.18 nats against the 12-flow NPE (5 of 5,
 $p\le2\times10^{-5}$), by 0.11--0.13 at $n=10{,}000$ against the NPE trained to convergence, and by 0.19--0.24 against
 the Gaussian predictor. With a tempered likelihood the BNN is lower than both from $n=500$: by 0.20 and 0.17 nats
-against NPE at $n=500$ and $1{,}000$, and by 0.19 and 0.13 against the Gaussian predictor. These are the sizes at which
-MILE improves on the same networks optimized to convergence, but only partly by averaging. At $n=5{,}000$ and
+against NPE at $n=500$ and $1{,}000$, and by 0.19 and 0.13 against the Gaussian predictor. Several differences in budget, tuning and data use favour the BNN
+at large $n$; Appendix~\ref{app:fairness} lists them and estimates their size, which is below the margins here.
+
+\textbf{Large $n$: better networks, not only averaging.} These are also the sizes at which MILE improves on the same
+networks optimized to convergence, and only partly by averaging. At $n=5{,}000$ and
 $10{,}000$ a typical single posterior draw of the untempered BNNs is already 0.04--0.14 nats below the converged
 12-network ensemble (Table~\ref{tab:sec6_draw}), 20--70\% of the BNN's lead over it; averaging within and across chains
 supplies the rest. MCLMC therefore also finds better individual networks than optimization to convergence. At these
 sizes the 12 chains do not agree with each other (median pooled $\widehat R$ on the predicted mean 1.16--1.68), although
-each chain's predictive is stable (Appendix~\ref{app:diag}). Several differences in budget, tuning and data use favour
-the BNN at large $n$; Appendix~\ref{app:fairness} lists them and estimates their size, which is below the margins
-here.
+each chain's predictive is stable (Appendix~\ref{app:diag}).
 
+\subsection{Sampling and ensembling inside the BNN}
+\label{sec:res_inside}
+Each BNN is itself sampled and ensembled: 12 chains, each started from one network of the capped Gaussian predictor
+(Table~\ref{tab:sec6_lppd}). For the average NLL the two are close substitutes at small $n$. Mixing the 12 chains lowers
+the NLL by 0.003--0.026 nats against a single chain at $n\le1{,}000$ (0.02--0.07 at $n\ge5{,}000$), whereas ensembling
+the 12 starting networks without sampling lowers it by 0.10 at $n=50$, 0.23 at $n=100$ and 0.08--0.14 at
+$n=500$--$1{,}000$ (Appendix~\ref{app:inside}): the draws of one chain already do the work of an ensemble. For the
+spread over training sets they are not substitutes. The 12 starting networks vary as much as the converged Gaussian
+predictor (standard deviation 0.16--0.18 nats at $n\le100$), the BNN started from them 0.05--0.06. A single draw used
+alone is a poor estimator at small $n$ under $\mathcal N(0,1)$ and tempering (median test NLL $+46$ and $+83$ at
+$n=50$) because it is badly over-confident on a few test datasets; mixing a chain's draws removes these failures. Under
+the data-free scale a typical draw scores $-0.06$, against $-0.38$ for its starting network and $-0.60$ for its chain.
+
+\subsection{Adjusting the prior and the likelihood}
 \label{sec:variants}\label{sec:res_tempering}\label{sec:res_datafree}%
-\textbf{The prior and the likelihood adjustments help at different sizes.} The data-free scale lowers the NLL most at
-$n=50$, by 0.24 nats against $\mathcal N(0,1)$, where it removes most of the excess predictive width of the default
-prior (2.4 times the width warranted by the BNN's own errors, reduced to about 1.2; Appendix~\ref{app:width}); its
-gain shrinks with $n$, and from $n=1{,}000$ it is slightly worse. Tempering lowers the NLL at every $n\le1{,}000$ but most
-at $n=500$ and $1{,}000$, by 0.25 and 0.15 nats, where the tempered BNN is the best model and the only one ahead of both
-ensembles. Section~\ref{sec:disc_adjust} discusses both adjustments and empirical Bayes.
+\textbf{Excess width under the default prior.} Under $\mathcal N(0,1)$ the BNN's predictive at $n=50$ is 2.38 / 2.42
+times ($\sigma$ / $\rho$) as wide as its own mean errors warrant, and its widths and the spread of its means together
+claim 3.09 / 3.67 times the variance of $\theta$ over the test set, where a coherent predictive claims 1 (coherence
+ratio, Appendix~\ref{app:width}). At every $n\le1{,}000$, 84--98\% of the excess variance is in the aleatoric term. The
+excess shrinks with $n$ and is gone from $n=5{,}000$.
 
-\paragraph{Summary.} Against single networks the BNN wins at every size. Against equally ensembled baselines it does not
-win on average at $n\le100$, where NPE is better at $n=100$, but it is more reliable across training sets and almost
-never badly over-confident. It wins on average from $n=500$ with a tempered likelihood and from $n=5{,}000$ without.
+\textbf{Data-free scale.} The data-free scale reduces the width over warranted width at $n=50$ to 1.15 / 1.20 and the
+coherence ratio to 1.00 / 1.09, and lowers the NLL most there, by 0.24 nats against $\mathcal N(0,1)$; its gain shrinks
+with $n$, and from $n=1{,}000$ it is slightly worse. The same scale follows from the coherence condition on the
+training inputs alone (Section~\ref{sec:bnn_datafree}), so it is not an artefact of the simulations used to calibrate it.
+
+\textbf{Empirical Bayes.} Maximizing the marginal likelihood of the training data recovers the data-free scale where the
+update is stable (final scale 0.37, 0.36 and 0.32 at $n=100$, 500 and $1{,}000$, against 0.3655). At $n=50$ it collapses
+in all 20 repeats to a nearly constant predictor, 0.54 nats above its control; a per-layer version did not rescue $n=50$
+and was worse at $n=500$ and $1{,}000$ (Appendix~\ref{app:eb}).
+
+\textbf{Tempering.} Tempering lowers the NLL at every $n\le1{,}000$ but most at $n=500$ and $1{,}000$, by 0.25 and 0.15
+nats, where the tempered BNN is the best model and the only one ahead of both ensembles. At $n=500$ the data-free scale
+narrows the predictive as much as tempering does (width over warranted width 1.09 / 1.24, against 1.09 / 1.26) but its
+predicted mean is worse, whereas the tempered BNN has the lowest mean error of any BNN (Appendices~\ref{app:width}
+and~\ref{app:moments}; the same holds at $n=1{,}000$). At $n=500$ and $1{,}000$ the selected temperature is the coldest at
+which the chains still mix (Appendix~\ref{app:temp_search}). The data-free scale is better at $n=50$, the two tie at
+$n=100$, and tempering is better from $n=500$; combining them was not tried.
+
+\paragraph{Summary.} Against single networks every BNN has the lower NLL at every $n$. Against 12-member ensembles of
+the same baselines no BNN is lower on average at $n\le100$: NPE is lower at $n=100$ by 0.18--0.29 nats, and at $n=50$
+only the data-free BNN is lower, marginally. At $n\le100$ every BNN's NLL varies 3--4 times less over training sets
+than the Gaussian predictor's ensemble and 3--6 times less than NPE's, its worst training set at $n=50$ is better, and it is badly over-confident on at most 0.3\% of
+test datasets in the median repeat, against 1.5--3\% for the ensembles and 0.9\% for the exact posterior. The BNN is
+lower than both ensembles from $n=500$ with a tempered likelihood and from $n=5{,}000$ without. Under the default prior
+it is too wide at $n\le100$, almost entirely in the aleatoric term, and the data-free scale removes most of the excess.
 
 \section{Discussion}
 \label{sec:discussion}
-\subsection{What the comparison shows}
 \label{sec:disc_answer}
-\textbf{Answer.} On this task, BNNs sampled with MILE do not reach a lower average test NLL than NPE in the low-data
-regime once both are ensembles of the same size, but they are more reliable. NPE is lower at $n=100$, by 0.18--0.29
-nats, and at $n=50$ only the BNN with the data-free scale is lower, marginally (Section~\ref{sec:res_ens}). Across
-training sets, however, every BNN's NLL varies 3--6 times less than NPE's, its worst training set at $n=50$ is better,
-and it is badly over-confident on at most 0.3\% of test datasets in the median repeat at $n\le100$, against
-1.5--3\% for the ensembles and 0.9\% for the exact posterior. Which of the two is the better performance depends on the use. A practitioner trains one estimator on one
-simulation budget and applies it to one observation, and cannot average over training sets; for that use an estimator
-whose quality varies little with the training draw and which is rarely badly over-confident is the safer choice, even at
-a somewhat higher average NLL. This reliability does not simply come from a wide predictive: the data-free BNN combines
-it with calibration (TARP coverage area $+0.003$, against $+0.014$ for NPE at $n=50$) and a width close to the one its
-errors warrant. At larger $n$ the BNN also wins on average, from $n=500$ with a tempered likelihood and from $n=5{,}000$
-without.
+On this task, BNNs sampled with MILE do not beat NPE on average in the low-data regime once both are ensembles of the
+same size, but they are the more reliable estimator, and we argue that reliability is what matters for SBI with little
+data. A practitioner trains one estimator on one simulation budget and applies it to one observation. They cannot
+average over training sets, and they cannot tell from their own training set whether it is one on which an optimized
+estimator happens to do well, since every training set is an equally likely draw from the simulator. How far a single
+result can be trusted then depends on the spread over training sets as well as on the average. On that criterion the
+BNN is better, with a spread at $n\le100$ that is 3--6 times smaller than NPE's and 3--4 times smaller than the Gaussian
+predictor's (Section~\ref{sec:res_ens}). We suggest that low-budget SBI comparisons report this spread, and how often the
+posterior is badly over-confident, alongside the average score. The paragraphs below give the interpretations behind
+this answer and the other results; the measurements of Section~\ref{sec:experiments} and the appendices support them
+but do not establish them.
 
-\textbf{Sampling and consistency at small $n$.} The interpretation offered here is that consistency is where sampling
-matters most at small $n$. With 50 or 100 simulations the main difficulty is not the capacity of the estimator but the
-noise in the training set: an optimized network, and an ensemble of 12, fits the particular draw it was given, and how
-well it generalizes depends on whether that draw happened to be informative. The 12 networks of the Gaussian predictor
-vary as much over training sets at MILE's starting point as after training to convergence (Appendix~\ref{app:inside});
-the same networks sampled with MILE vary 3--6 times less. Sampling therefore appears to remove most of the dependence on
-the training draw. This does not show up as a lower average NLL because the dependence cuts both ways: on favourable
-draws the optimized ensembles are better than the BNN, on unfavourable ones worse, and on average they are close or
-better. Put precisely: over training sets, the test NLL of an optimized ensemble has a 3--6 times larger standard
-deviation than the BNN's. A practitioner has a single training set and cannot tell from it whether it is one on which
-the optimized estimator does well or badly, since every training set is an equally likely draw from the simulator; how
-far a single result can be trusted then depends on that spread, not only on the average. On this task, sampling is what comes closest to addressing this.
+\runinsubsection[Why sampling, and not ensembling, buys consistency]{Why sampling, and not ensembling, buys consistency.} With 50 or 100 simulations the main difficulty is not
+the capacity of the estimator but the noise in the training set. An optimized network, and an ensemble of 12, fits the
+particular draw it was given. The Gaussian predictor's networks vary as much over training sets at MILE's starting point
+as after training to convergence, and the same networks sampled with MILE vary 3--4 times less
+(Section~\ref{sec:res_inside}). Our interpretation is that an ensemble averages over initializations that are all fitted
+to the same draw, whereas sampling averages over the networks that the draw does not rule out, so its predictive
+depends less on which draw it was. We have not tested this against an ensemble with explicit regularization or a
+bootstrap over training rows. The dependence on the draw cuts both ways, which is why it does not lower the average. On
+favourable draws the optimized ensembles beat the BNN, and on unfavourable ones they lose to it. For the same reason, a
+comparison with a single network overstates what sampling does. For the average NLL at small $n$, sampling and
+ensembling are close substitutes, and deep ensembles can themselves be read as approximate Bayesian model averaging
+\citep{wilson2020bayesian}. Here the single-network comparison shows an advantage of about 1 nat at $n=50$ that equal
+ensembling removes. Ensembled baselines of the kind that \citet{hermans2022trust} recommend and
+\citet{delaunoy2024lowbudget} include are therefore the necessary control, and without them a low-budget advantage of a
+BNN is evidence for averaging rather than for sampling.
 
-\textbf{Why ensembling closes the gap in the average.} Sampling and ensembling both average a predictive over networks,
-and for the average NLL at small $n$ they are close substitutes: inside every BNN, mixing its 12 chains adds at most
-0.03 nats at $n\le1{,}000$, whereas ensembling 12 unsampled networks adds 0.08--0.23 (Appendix~\ref{app:inside}). One
-chain's draws already do the work of an ensemble, and deep ensembles can in turn be read as approximate Bayesian model
-averaging \citep{wilson2020bayesian}. A comparison of a BNN with a single network therefore credits sampling with what
-ensembling also provides; the ensembled baselines that \citet{hermans2022trust} recommend, finding that ``ensembling
-posterior surrogates provides more reliable approximations'', and that \citet{delaunoy2024lowbudget} include are the
-necessary controls.
+\runinsubsection[At small \texorpdfstring{$n$}{n} the aleatoric term is not aleatoric]{At small \texorpdfstring{$n$}{n} the aleatoric term is not aleatoric.}
+\label{sec:disc_aleatoric}
+Under $\mathcal N(0,1)$, 84--98\% of the BNN's excess width at $n\le1{,}000$ lies in its aleatoric term, and a smaller
+prior scale chosen without training data removes most of it (Section~\ref{sec:variants}). The width the network reports
+as irreducible noise is therefore set largely by the prior. The excess is not in the data, whose exact posterior width
+is known, and it responds to a change of the weight prior. Some excess at $n=50$ is not specific to the prior. NPE,
+which has no weight prior, claims 1.44 / 1.38 times the prior variance as a mean over repeats and 1.20 / 1.24 in the
+median repeat (one repeat at 6.29 for $\sigma$ dominates the mean), and its excess is gone by $n=100$. The
+$\mathcal N(0,1)$ BNN's excess, 3.09 / 3.67, is two to three times NPE's by either measure and persists to
+$n=1{,}000$ (Appendix~\ref{app:width}). We read this as the noise output absorbing what a misspecified prior and a small
+training set leave unresolved, that is, epistemic uncertainty reported as aleatoric. It is an instance of the finite-$n$
+failure described by \citet{bickfordsmith2025rethinking}, for whom the model's expected conditional uncertainty is only
+an estimate of the irreducible part, and possibly a highly inaccurate one. It also parallels the Gaussian-process result
+of \citet{wendl2026forgetting}, in which structure the kernel cannot represent is absorbed into a learned noise level.
+Neither work varies the training-set size or compares with an exact posterior, and in the latter the mismatch is a
+too-restrictive kernel rather than a too-wide prior. For SBI the implication is that a BNN's aleatoric/epistemic split
+at small budgets should not be read as a split into irreducible and reducible posterior uncertainty without an
+external check, such as the coherence ratio, which needs only the prior and is necessary but not sufficient, or a
+reference posterior. The conclusions of Section~\ref{sec:experiments} do not depend on the split, since they rest on
+the NLL of the full predictive. How the prior reaches the noise output is not established. One possibility, that
+tempering acts on the noise output directly through every likelihood term (Eq.~\eqref{eq:tempered_obs}) while a weight
+prior acts only through the network's function-space prior, is stated in Appendix~\ref{sec:res_shape}.
 
-\textbf{Where NPE's edge lies.} NPE's advantage at $n=100$ is in the predicted mean: the 12-flow ensemble's mean error
-is 0.10 for $\sigma$ and 0.09 for $\rho$, against 0.12--0.13 and 0.10--0.11 for the BNNs (Appendix~\ref{app:moments}),
-and its advantage in $\sigma$, whose posterior is right-skewed, comes from the flow head (Appendix~\ref{app:npe_variants}). Neither
-adjustment of the BNN changes the mean error at $n\le100$ by more than 0.006. The remaining gap is in the likelihood
-family, not in the prior.
-
-\textbf{What sampling adds at large $n$.} From $n=5{,}000$ the untempered BNNs beat both ensembles, partly because
-MCLMC finds better networks than optimization to convergence: a typical single draw is already below the converged
-12-network ensemble, by 20--70\% of the BNN's lead (Appendix~\ref{app:inside}). The chains disagree with each other
-while each is stable, the situation in which \citet{sommer2024connecting} argue that $\widehat R$ should not penalize
-chain-wise differences and in which, as \citet{papamarkou2022challenges} note for non-converged chains, the predictive
-remains useful. How much of the large-$n$ advantage is averaging and how much is optimization is only partly separated
-here.
-
-\subsection{Adjusting the BNN's prior and posterior}
+\runinsubsection[The scale and the form of the prior]{The scale and the form of the prior.}
 \label{sec:disc_adjust}
-\textbf{The default prior is too wide at small $n$.} Under MILE's default $\mathcal N(0,1)$ prior the predictive at
-$n=50$ is 2.4 times wider than the BNN's own errors warrant, almost all of the excess in the aleatoric term, and it
-claims about three times the prior's variance (Appendix~\ref{app:width}). A weight-prior scale chosen without training
-data removes most of this excess and gives the best BNN at $n=50$; its gain fades as the data grow and is slightly
-negative from $n=1{,}000$. The same scale follows from a coherence condition on the training inputs alone
-(Section~\ref{sec:bnn_datafree}), so it is not an artefact of the simulations used to calibrate it.
+Tempering with $T=0.6$--$0.7$ counts each training pair 1.4--1.7 times (Eq.~\eqref{eq:tempered_obs}), so the posterior
+relies less on the prior, and we read it as compensating a misspecified prior. $\mathcal N(0,1)$ on every weight is a
+default rather than a prior chosen for this task, the untempered BNN is under-confident at every $n\le1{,}000$
+(Appendix~\ref{app:width}), and work on the cold posterior effect lists an inadequate prior among its causes
+\citep{wenzel2020cold,fortuin2022priors}. Our results separate the scale of the prior from its form. The scale is well
+specified once it is set to the data-free value, which empirical Bayes recovers from the training data at
+$n=100$--$1{,}000$ (Section~\ref{sec:variants}), so the error in MILE's default lies in its scale and is corrected. The
+isotropic Gaussian form is probably not well specified. At the smallest $n$ the scale is the dominant error, and the
+data-free scale gains as much as tempering or more (more at $n=50$, a tie at $n=100$). At intermediate $n$ what remains
+is the form, which only tempering compensates, and there tempering gains most. At $n=500$ the data-free scale narrows
+the predictive as much as tempering does but worsens the predicted mean, whereas tempering gives the best mean of any
+BNN. This is what one would expect if a single scale for every weight still pulls the fit away from the data while
+tempering lowers the weight of the prior as a whole, and \citet{wenzel2020cold} likewise find that ``the cold posterior
+effect cannot be resolved by using the right scaling of the Normal prior''. Our reading predicts that a prior fitted to
+the task's function space, for instance optimized as in \citet{delaunoy2024lowbudget}, would make tempering unnecessary
+at intermediate $n$, which was not tested. At $n=50$ the training data cannot set the scale at all, since empirical
+Bayes collapses there to a nearly constant predictor, the underfitting that \citet{lotfi2022bayesian} describe for
+marginal-likelihood hyperparameters at small $n$. For BNN-based SBI at small budgets we therefore recommend setting the
+prior scale from the prior predictive, or from the coherence condition on the training inputs, rather than by empirical
+Bayes.
 
-\textbf{Empirical Bayes.} Choosing the scale by maximizing the marginal likelihood of the training data recovers the
-data-free scale wherever the update is stable, at $n=100$--$1{,}000$, which confirms that scale independently. At $n=50$
-it collapses in every repeat to a nearly constant predictor (Appendix~\ref{app:eb}), the underfitting that
-\citet{lotfi2022bayesian} describe for marginal-likelihood hyperparameters at small $n$; MacKay's evidence update with
-sample-based moments is known to oscillate or diverge to very small scales when applied per layer
-\citep{antoran2023sampling}, and a per-layer version did not help here. At the smallest $n$ the training data cannot set
-the scale, and the data-free choice is the one that works.
+\runinsubsection[What MCLMC does at large \texorpdfstring{$n$}{n}, and how to judge convergence]{What MCLMC does at large \texorpdfstring{$n$}{n}, and how to judge convergence.}
+\label{sec:disc_conv}
+From $n=5{,}000$ the untempered BNNs beat both ensembles, and a typical single draw is already below the converged
+12-network ensemble, by 20--70\% of the BNN's lead (Section~\ref{sec:res_ens}). We read this as MCLMC acting in part as a
+better optimizer, whose trajectories reach networks that the same networks optimized to convergence do not. The chains
+disagree with each other while each is stable. This is the situation in which \citet{sommer2024connecting} argue that
+$\widehat R$ should not penalize chain-wise differences, and in which, as \citet{papamarkou2022challenges} note for
+non-converged chains, the predictive remains useful. More generally, the pooled $\widehat R$ on the predicted mean is not
+an acceptance test for these fits. It passes the collapsed empirical-Bayes fits at $n=50$ on two of five repeats, does
+not see disagreement between the members' widths at small $n$, and fails at $n=10{,}000$ on fits whose test NLL has a
+standard deviation of 0.005 nats over repeats (Appendix~\ref{sec:res_rhat}). For BNN-based SBI we suggest judging fits by
+chain-wise statistics and by scores against a reference rather than by pooled $\widehat R$. MILE's tuning is a related
+case. Re-estimating its step size and $L$ periodically during sampling lowers the NLL of $\mathcal N(0,1)$ by 0.15 and
+0.12 nats at $n=500$ and $1{,}000$ (Appendix~\ref{app:eb}), where the re-tune settles at about a third of the warmup's
+$L$ (earlier runs, Appendix~\ref{sec:retune}), whereas \citet{sommer2025mile} find MILE effectively tuning-free on
+regression datasets from the UCI machine-learning repository. Whether the gain reflects faster exploration or a biased
+target is not established.
 
-\textbf{Tempering.} Tempering adjusts the posterior rather than the prior, scaling the likelihood of every training pair
-by $1/T$ (Eq.~\eqref{eq:tempered_obs}); with $T=0.6$--$0.7$ each training pair is in effect counted 1.4--1.7 times, so
-the posterior relies less on the prior. The explanation proposed here is that tempering compensates a misspecified
-prior. The untempered BNN is under-confident at every $n\le1{,}000$ (Appendix~\ref{app:width}), and $\mathcal N(0,1)$ on
-every weight is a default, not a prior chosen for this task. \citet{wenzel2020cold} find $\mathcal N(0,I)$ ``a poor
-prior'' for their network and list an inadequate prior among the possible causes of the cold posterior effect, and
-\citet{fortuin2022priors} report ``evidence that the cold posterior effect arises due to a misspecification of the
-prior''. Two observations here fit this explanation. Where the prior's influence is largest, at $n\le100$, both a better
-prior scale and tempering lower the NLL. And a better isotropic scale does not replace tempering at intermediate $n$: at
-$n=500$ the data-free scale narrows the predictive as much as tempering does (width over warranted width 1.09 / 1.24,
-against 1.09 / 1.26) but makes the predicted mean worse, whereas tempering gives the lowest mean error of any BNN and
-lowers the NLL by 0.25 nats (Appendices~\ref{app:width} and~\ref{app:moments}; the same holds at $n=1{,}000$). One scale
-for every weight is unlikely to be the correct prior, so shrinking the weights still pulls the fit away from the data,
-while tempering lowers the weight of the prior as a whole; \citet{wenzel2020cold} likewise find that ``the cold
-posterior effect cannot be resolved by using the right scaling of the Normal prior''. A reading consistent with both
-observations is that at the smallest $n$ the scale is the dominant error in the prior, which the data-free scale fixes,
-and at intermediate $n$ what remains is its isotropic form, which only tempering compensates. The explanation is not
-tested directly here, for instance with a prior fitted to the task. At $n=500$ and $1{,}000$ the chosen temperature is
-the coldest at which the chains still mix (Appendix~\ref{app:temp_search}). The prior scale and tempering thus divide the
-range: the data-free scale is better at $n=50$, the two tie at $n=100$, and tempering is better from $n=500$. Combining
-them was not tried.
-
-\textbf{Relation to work on cold posteriors and priors.} \citet{wenzel2020cold} find deep BNNs best at $T<1$, and
-\citet{noci2021disentangling} that the effect ``becomes stronger for smaller dataset size $n$''. Here $T=0.6$--$0.7$
-lowers the NLL at every $n\le1{,}000$, but the gain is smallest at $n\le100$ and largest at $n=500$, and a prior scale substitutes for tempering only at $n=50$.
-\citet{fortuin2022priors} remove the effect with heavy-tailed priors in fully connected classifiers; their setting is
-classification at full dataset size and ours heteroskedastic regression at small $n$, and the heavy-tailed prior tried
-here is reported only for the earlier runs (Appendix~\ref{app:variants}).
-
-\subsection{Relation to BNNs for simulation-based inference}
+\runinsubsection[Relation to BNNs for simulation-based inference]{Relation to BNNs for simulation-based inference.}
 \label{sec:disc_lit}
-\citet{delaunoy2024lowbudget} find their variational BNN-NPE conservative down to budgets of $O(10)$, where NPE
-``produces an overconfident approximation'', and slow to reach NPE's predictive power at large budgets. Here the
-untempered $\mathcal N(0,1)$ BNN is conservative at small $n$ as well (TARP coverage area $+0.05$ at $n=50$), but the
-12-flow NPE is not over-confident, and at large $n$ the MILE-sampled BNN does better than NPE, not worse. Their BNN is a
-normalizing flow fitted by variational inference under an optimized functional prior and scored without a reference
-posterior; ours is a Gaussian-head network sampled by MCMC under a scalar prior scale and scored against the exact
-posterior, so the two results need not conflict. \citet{poh2025lensing} find NPE ``more accurate, precise, and
-well-calibrated'' than variational BNNs at 200{,}000--800{,}000 simulations, with BNNs that ``tend to be
-underconfident''. Our largest $n$ is $10{,}000$; there the MILE BNN is more accurate than NPE, and its under-confidence is
-confined to small $n$ and, with the data-free scale, largely removed there too.
+At small budgets our results agree with \citet{delaunoy2024lowbudget}. As in their study, the untempered
+$\mathcal N(0,1)$ BNN is conservative (TARP coverage area $+0.05$ at $n=50$) and NPE is over-confident, although the
+12-flow ensemble much less so than a single flow. At $n=50$ the ensemble is badly over-confident ($|z|>3$) on 3.0\% of
+test datasets in the median repeat, against 6.4\% for one flow (1.8\% against 6.3\% at $n=100$). At large budgets the
+results differ. \citet{delaunoy2024lowbudget} find their BNN slow to reach NPE's accuracy, and \citet{poh2025lensing}
+find NPE more accurate and better calibrated than an under-confident BNN at 200{,}000--800{,}000 simulations. Here the
+MILE-sampled BNN is more accurate than NPE at our largest size, $n=10{,}000$, and its under-confidence is confined to
+small $n$ and largely removed there by the data-free scale. Both studies fit the BNN by variational inference, and
+neither scores it against a reference posterior. Ours is sampled by MCMC under a scalar prior scale and scored by test
+NLL with the exact posterior as a reference, so the results need not conflict.
 
-\subsection{Limitations and next steps}
+\runinsubsection[Limitations]{Limitations.}
 \label{sec:disc_limits}
-\paragraph{Limitations.} The limitations of the task itself (its dimension, the fixed sufficient summary, near-Gaussian
-posteriors and a fixed design) are given in Section~\ref{sec:why_task}; the exact posterior's grid is adequate except for
-the two lowest-$\rho$ test datasets (Section~\ref{sec:reference}). At $n\le100$ every method is far from the exact
-posterior, with test NLLs between $-0.36$ and $-1.06$ nats against $-2.39$: a gap of 1.3--2.0 nats beside differences
-between methods of 0.1--0.3. With 50 or 100 simulations no method learns the posterior well, as expected, and this is
-part of why a winner on the average NLL is hard to pick there. The comparisons favour the BNN in budget, tuning effort
-and data use (Appendix~\ref{app:fairness}): at $n\le100$ this strengthens the conclusion; at large $n$ each difference
-is smaller than the margin, but they have not been removed jointly. NPE trained to convergence at $n=5{,}000$, run after
-the tables of Section~\ref{sec:experiments} were made, improves on its default budget by 0.02 nats and leaves the
-untempered BNNs 0.11--0.14 nats ahead. The paired tests cover variation over training sets on one shared test set. At $n\ge5{,}000$ the repeats share
-most or all of their training rows, so their spread is mostly seed variance, and the best temperature there is inferred rather than searched
-(Section~\ref{sec:bnn_temp}). The
-BNN's learning rate, weight decay and temperatures were chosen on the training draws of repeats 0--2, which are also
-evaluated; at $n\le100$, 17 of the 20 repeats lie outside them. MCLMC is used without a Metropolis correction, and at
-$n\ge5{,}000$ the chains do not agree, so the large-$n$ results are those of MILE's output rather than of a converged
-posterior. GPU runs are not bit-reproducible (Appendix~\ref{app:repro}), and the two-target model relies on undocumented
-\code{bde} internals pinned to version 1.0.2 (Appendix~\ref{app:bde}).
+The main limitation is that every result comes from one task, a single simulator with a two-parameter posterior, so
+whether the BNN's reliability advantage and its aleatoric excess hold on other simulators is untested; the limitations
+of the task itself are discussed in Section~\ref{sec:why_task}. At $n\le100$ every method's test NLL is 1.3--2.0 nats
+above the exact posterior's $-2.39$, while the methods differ from each other by only 0.1--0.3, which is part of why a
+winner on the average NLL is hard to pick there. The comparisons favour the BNN in budget, tuning effort and data use
+(Appendix~\ref{app:fairness}). At $n\le100$ this strengthens the conclusion, and at large $n$ each difference is smaller
+than the margin, although they have not been removed jointly. All repeats share one test set, and at $n\ge5{,}000$ they
+also share most of their training rows, so their spread there is mostly seed variance. The BNN's learning rate, weight
+decay and temperatures were chosen on the training draws of repeats 0--2, which are also evaluated, and the best
+temperature at $n\ge5{,}000$ is inferred rather than searched (Section~\ref{sec:bnn_temp}). Finally, MCLMC is used without
+a Metropolis correction, and at $n\ge5{,}000$ the chains do not agree, so the large-$n$ results describe MILE's output
+rather than a converged posterior.
 
-\paragraph{Next steps.} (i) Close the remaining large-$n$ fairness gaps jointly: NPE fitted on all training rows with a
-fixed step count, and the temperature search at $n\ge5{,}000$. (ii) Separate MCLMC's optimization effect from averaging at
-large $n$, for instance by optimizing from the chains' final states to convergence and comparing with single draws and
-with the chain average. (iii) A Bayesian NPE: NPE's masked autoregressive flow head with its weights sampled by MILE
-rather than optimized. NPE's remaining small-$n$ advantage comes from its flow head, and posteriors need not be close to
-Gaussian when an observation carries little information; a sampled flow would combine that representational power
-with the consistency of sampling. \citet{delaunoy2024lowbudget} fit a flow of this kind by variational inference.
-(iv) Priors that act where the excess width is: a separate scale for the noise output, empirical Bayes with
-decreasing-step updates and a hyperprior, or the coherence condition as a prior term. (v) A bootstrap over training
-repeats and test datasets jointly, for intervals that include test-set uncertainty. (vi) Larger fields: the same
-simulator on two- and three-dimensional grids (Section~\ref{sec:why_task}), toward cosmological field-level inference.
+\runinsubsection[Next steps]{Next steps.}
+\label{sec:disc_head}
+(i) Other simulators, such as standard SBI benchmark tasks \citep{lueckmann2021benchmark} and astrophysical simulators
+such as weak-lensing maps \citep{jeffrey2021lensing} or the CAMELS suite \citep{villaescusa2021camels}. Since the test
+NLL needs no exact posterior, the main comparison carries over directly. (ii) Controls for the consistency mechanism,
+namely ensembles with explicit regularization and bootstrap ensembles over training rows. (iii) Separating MCLMC's
+optimization effect from averaging at large $n$, for instance by optimizing from the chains' final states to
+convergence. (iv) A Bayesian NPE, with NPE's flow head sampled by MILE. NPE's remaining small-$n$ advantage comes from
+its flow head, which can represent the skew of $\sigma$'s posterior (Appendix~\ref{app:npe_variants}), and sampling it
+would combine that flexibility with the consistency of sampling; \citet{delaunoy2024lowbudget} fit such a flow by
+variational inference. (v) Priors that act where the excess width is, such as a separate scale for the noise output or
+a prior fitted to the task's function space. (vi) Larger fields, with the same simulator on two- and three-dimensional
+grids, toward cosmological field-level inference (Section~\ref{sec:why_task}).
 
 \bibliographystyle{unsrtnat}
 \bibliography{paper}
@@ -1101,7 +1168,7 @@ coherence ratio & 1.00 & 1.01 \\
 $\mathrm{std}(z)$; fraction $|z|<1$; median $|z|$ & 1.02;\ 0.69;\ 0.71 & 0.97;\ 0.71;\ 0.67 \\
 \midrule
 test NLL (joint) & \multicolumn{2}{c}{$-2.390$} \\
-TARP coverage AUC; calibration error & \multicolumn{2}{c}{$+0.005$;\ 0.005} \\
+TARP coverage area; calibration error & \multicolumn{2}{c}{$+0.005$;\ 0.005} \\
 test datasets with $|z|>3$ (\%) & \multicolumn{2}{c}{0.9} \\
 \bottomrule
 \end{tabular}
@@ -1133,7 +1200,7 @@ BNN & $n=50$ & $n=100$ & $n=500$ & $n=1{,}000$ & $n=5{,}000$ & $n=10{,}000$ \\
 \caption{Each BNN against each 12-member ensemble: \textbf{better}, tie or worse by a two-sided paired $t$-test at
 $p<0.05$ on the per-repeat test NLL (20 repeats at $n\le100$, 5 above; Section~\ref{sec:paired}), with the mean
 difference BNN $-$ ensemble in nats (negative: the BNN is lower). The tempered BNN is not run at $n\ge5{,}000$. Against
-the long-trained NPE at $n=10{,}000$ the $\mathcal N(0,1)$ and data-free BNNs are also better, by 0.12 and 0.11 nats.
+the long-trained NPE at $n=10{,}000$ the $\mathcal N(0,1)$ and data-free BNNs are also better, by 0.13 and 0.11 nats.
 Same fits as Table~\ref{tab:sec6_ens}.}
 \label{tab:verdict}
 \end{table}
@@ -1149,7 +1216,7 @@ Same fits as Table~\ref{tab:sec6_ens}.}
 \inputrows{tables/understanding_results_paired_a.tex}
 \bottomrule
 \end{tabular}}
-\caption{Paired differences in test NLL (nats), $A-B$ per repeat, mean $\pm$ sd over repeats (20 at $n\le100$, 5 above); negative: $A$ is better. Below each difference: repeats in which $A$ is better ($k/R$), the two-sided paired $t$-test $p$, and at $n\le100$ the two-sided Wilcoxon signed-rank $p$ (W; with 5 repeats its smallest attainable $p$ is 0.0625, so it is not shown). Bold: $t$-test $p<0.05$. $^\dagger$: the Wilcoxon test disagrees about $p<0.05$. GP: Gaussian predictor (conv.\ converged; capped: MILE's pretraining budget, the BNN's own start); 12 / 1: ensemble / member 0. Part 1: the BNN against NPE and against its converged unsampled networks; the long-trained NPE exists at $n=5{,}000$ and $10{,}000$ only, the tempered BNN is not run at $n\ge5{,}000$.}
+\caption{Paired differences in test NLL (nats), $A-B$ per repeat, mean $\pm$ sd over repeats (20 at $n\le100$, 5 above); negative: $A$ is better. Below each difference: repeats in which $A$ is better ($k/R$), the two-sided paired $t$-test $p$, and at $n\le100$ the two-sided Wilcoxon signed-rank $p$ (W; with 5 repeats its smallest attainable $p$ is 0.0625, so it is not shown). Bold: $t$-test $p<0.05$. $^\dagger$: the Wilcoxon test disagrees about $p<0.05$. Gaussian predictor: conv.\ = trained to convergence, capped = MILE's pretraining budget, the BNN's own start; 12 / 1: ensemble / member 0. Part 1: the BNN against NPE and against its converged unsampled networks; the long-trained NPE exists at $n=5{,}000$ and $10{,}000$ only, the tempered BNN is not run at $n\ge5{,}000$.}
 \label{tab:paired_a}
 \end{table}
 
@@ -1164,7 +1231,7 @@ Same fits as Table~\ref{tab:sec6_ens}.}
 \inputrows{tables/understanding_results_paired_b.tex}
 \bottomrule
 \end{tabular}}
-\caption{Paired differences in test NLL (nats), $A-B$ per repeat, mean $\pm$ sd over repeats (20 at $n\le100$, 5 above); negative: $A$ is better. Below each difference: repeats in which $A$ is better ($k/R$), the two-sided paired $t$-test $p$, and at $n\le100$ the two-sided Wilcoxon signed-rank $p$ (W; with 5 repeats its smallest attainable $p$ is 0.0625, so it is not shown). Bold: $t$-test $p<0.05$. $^\dagger$: the Wilcoxon test disagrees about $p<0.05$. GP: Gaussian predictor (conv.\ converged; capped: MILE's pretraining budget, the BNN's own start); 12 / 1: ensemble / member 0. Part 2: the BNN against its own capped starting networks, ensembling, the unsampled baselines against each other, and the BNN variants; empirical Bayes is compared with its fixed-scale control on the same re-tuning sampler.}
+\caption{Paired differences in test NLL (nats), $A-B$ per repeat, mean $\pm$ sd over repeats (20 at $n\le100$, 5 above); negative: $A$ is better. Below each difference: repeats in which $A$ is better ($k/R$), the two-sided paired $t$-test $p$, and at $n\le100$ the two-sided Wilcoxon signed-rank $p$ (W; with 5 repeats its smallest attainable $p$ is 0.0625, so it is not shown). Bold: $t$-test $p<0.05$. $^\dagger$: the Wilcoxon test disagrees about $p<0.05$. Gaussian predictor: conv.\ = trained to convergence, capped = MILE's pretraining budget, the BNN's own start; 12 / 1: ensemble / member 0. Part 2: the BNN against its own capped starting networks, ensembling, the unsampled baselines against each other, and the BNN variants; empirical Bayes is compared with its fixed-scale control on the same re-tuning sampler.}
 \label{tab:paired_b}
 
 \end{table}
@@ -1287,8 +1354,8 @@ budget, tuning and data use. Each difference, its direction and, where possible,
   steps, each a full-batch gradient: about three times the gradient evaluations of a default-budget flow. The converged
   Gaussian predictor (up to 67{,}500 steps) and the long-trained NPE (up to 84{,}400) remove the optimization-budget part of
   this difference where they are used. Favours the BNN where the comparator is at its default budget.
-\item \textbf{Hyperparameter search.} NPE's learning rate and weight decay come from Bayesian optimization with 3--20
-  trials per size on one 80/20 split of the repeat-0 training rows; the BNN's and the Gaussian predictor's from a
+\item \textbf{Hyperparameter search.} NPE's learning rate and weight decay come from a Bayesian-optimization search of
+  3--20 trials per size that acted as a random search of 3--10 points (Appendix~\ref{app:hp}) on one 80/20 split of the repeat-0 training rows; the BNN's and the Gaussian predictor's from a
   255-point grid scored on three repeats (Section~\ref{sec:hp}). The converged Gaussian predictor keeps values chosen
   under the 2{,}000-step budget, and at $n=50$ the grid's argmin is noise-driven. Favours the BNN over NPE in tuning
   effort; disfavours the converged Gaussian predictor.
@@ -1318,7 +1385,15 @@ NPE fitted on all $n$ rows would close the other.
 noise scale per input, the predictive variance splits by the law of total variance into an aleatoric part (the
 expected predicted noise, irreducible) and an epistemic part (the variance of the predicted mean over the posterior,
 reducible with data), as in Eq.~\eqref{eq:decomp} \citep{kendall2017uncertainties}. In their experiments the aleatoric
-term stays roughly constant across training-set sizes while the epistemic term decreases as data grow. In SBI the role
+term stays roughly constant across training-set sizes while the epistemic term decreases as data grow.
+\citet{bickfordsmith2025rethinking} list this behaviour with varying $n$ (Table~3 of \citet{kendall2017uncertainties})
+among the ``misleading implications'' of the aleatoric/epistemic view: for finite $n$ the model's expected conditional
+uncertainty ``is only an estimator'' of the uncertainty that would remain after infinite data, ``and it can be highly
+inaccurate'', and the irreducible/reducible split holds only for a well-specified model with exact updating, ``with any
+model misspecification or error in belief updating reintroducing the dependency''. Their statements are for entropy;
+under squared loss their uncertainty measure is the variance (their Example~1), and the expected predicted noise
+variance of Eq.~\eqref{eq:decomp} takes the same role here. The BNN's aleatoric term is therefore an estimate of the
+irreducible width, to be checked rather than assumed. In SBI the role
 of $(x,y)$ is played by $(S,\theta)$: the exact posterior width given $S$ is the irreducible part, and the epistemic part
 should vanish as $n\to\infty$ and grow as $n$ shrinks. Because the exact posterior is known, whether the BNN's widths
 are right, and in which term an excess lies, can be measured directly.
@@ -1337,7 +1412,8 @@ the mean error that lies in the aleatoric term of Eq.~\eqref{eq:decomp}.
 
 \textbf{Results.}
 Under $\mathcal N(0,1)$ the sampled BNN's predictive at $n\le100$ is wider than its own errors warrant and claims more
-uncertainty than the prior has (Table~\ref{tab:app_width}); most of the excess is in the aleatoric term. Tempering does
+uncertainty than the prior has (Table~\ref{tab:app_width}); most of the excess is in the aleatoric term, an instance of the
+finite-$n$ estimation error of \citet{bickfordsmith2025rethinking}, measured here against a known irreducible width. Tempering does
 not narrow it at $n=50$ and narrows it from $n=100$; the data-free scale removes most of it at every size. The
 Gaussian predictor's ensemble is slightly too narrow and claims less variance than the prior at small $n$, and the NPE
 ensemble is close to warranted except at $n=50$.
@@ -1366,7 +1442,7 @@ $\big(\frac1M\sum_j(\hat\mu_j-\mu^\star_j)^2\big)^{1/2}$, 0 for the exact poster
 error is bounded below, in expectation, by that of the exact posterior mean (0.156 for $\sigma$ and 0.050 for $\rho$),
 and the relative error against the true parameter, $\frac1M\sum_j|\hat\mu_j-\theta^\ast_j|/|\theta^\ast_j|$ (denominator
 floored at $10^{-3}$), appears in Appendix~\ref{app:variants}. \emph{Width error}: $\frac1M\sum_j|\hat s_j-s^\star_j|/s^\star_j$.
-\emph{Spread of $z$}: $\mathrm{std}(z)$ with $z_j=(\theta^\ast_j-\hat\mu_j)/\hat s_j$, above 1 for an over-confident method
+\emph{Spread of $z$}: $\mathrm{std}(z)$ with $z_j=(\hat\mu_j-\theta^\ast_j)/\hat s_j$, above 1 for an over-confident method
 and below 1 for an under-confident one; the fraction with $|z_j|<1$ is 0.68 for a calibrated Gaussian.
 \emph{TARP} \citep{lemos2023tarp} is a joint coverage test from samples, necessary and sufficient for an accurate
 posterior estimator. Parameters are rescaled to the unit box spanned by the reference grid; for each test dataset a
@@ -1388,7 +1464,7 @@ Figure~\ref{fig:tarp_ens} shows the TARP coverage curves of the five ensembled m
 level, $\mathrm{ECP}(\alpha)-\alpha$, against $\alpha$. 0: credible regions contain the truth as often as they claim;
 above 0: conservative (too wide); below 0: over-confident. Line: pooled over repeats (20 at $n\le100$, 5 above); band:
 $\pm1$ sd over the per-repeat curves. The coverage area $\int(\mathrm{ECP}(\alpha)-\alpha)\,\mathrm{d}\alpha$ at $n=50$
-is $+0.052$, $+0.004$ and $+0.049$ for the $\mathcal N(0,1)$, data-free and tempered BNNs, $-0.015$ for the Gaussian
+is $+0.052$, $+0.003$ and $+0.049$ for the $\mathcal N(0,1)$, data-free and tempered BNNs, $-0.015$ for the Gaussian
 predictor and $+0.014$ for NPE.}
 \label{fig:tarp_ens}
 \end{figure}
@@ -1562,13 +1638,14 @@ settings are fixed as in Sections~\ref{sec:gauss}--\ref{sec:impl}. The test set 
   by 15 weight decays ($10^{-7}$ to 1, half decades); the argmin of the mean over the three training sets is used at
   every size. One pair per size serves every BNN variant and both versions of the Gaussian predictor.
 \item \textbf{NPE} (\code{scripts/tuning/optimize\_npe.py}): Bayesian optimization (Section~\ref{sec:hp}) of the early-stopping
-  validation NLL on an 80/20 split (seed 123) of the repeat-0 training rows; 200\,s per size, 3--20 trials.
+  validation NLL on an 80/20 split (seed 123) of the repeat-0 training rows; 200\,s per size, 3--20 trials (3, 5, 9,
+  14, 20 and 19 at $n=10{,}000$, 5{,}000, 1{,}000, 500, 100 and 50).
 \end{itemize}
 
 \textbf{Rationale.} Only learning rate and weight decay are searched, with the architecture fixed and
 identical across methods, so that a difference between methods cannot come from one of them receiving a
-larger or better-tuned network. MILE's sampler settings are not searched: in the MILE ablations (one
-regression benchmark) predictive performance changes little with the energy-variance schedule or the two
+larger or better-tuned network. MILE's sampler settings are not searched: in the MILE ablations (two UCI
+regression datasets, bikesharing and protein) predictive performance changes little with the energy-variance schedule or the two
 parameters of the step-size adaptation, and only marginally with a much longer warmup, which its authors
 judge not worth the linear cost; they call the method ``effectively tuning-free'' \citep{sommer2025mile}. In MILE the
 two hyperparameters act only on the pretraining that initializes the chains and on the initial step size, so the
@@ -1583,8 +1660,10 @@ not recorded: (a) NPE's search ranges; (b) its random state and 10 initial point
 (c) its 200\,s budget; (d) the choice of 3 training draws and 1{,}000 held-out rows for the grid, taken over from the
 earlier BNN search.
 
-\textbf{Differences between the searches.} (i) NPE's search starts from 10 random points, and every NPE choice is one of
-them, so for NPE it acted as a 10-point random search. (ii) The objectives differ: the BNN's network is scored on 1{,}000
+\textbf{Differences between the searches.} (i) NPE's search was in effect a random search of 3--10 points.
+\code{scikit-optimize} draws 10 random points before its Gaussian-process phase. At $n\ge1{,}000$ the 200\,s budget
+ended within them (3, 5 and 9 trials); at $n\le500$ the 4--10 guided trials that followed did not improve on them, so
+every selected pair is one of the random initial points (checked by regenerating them from the random state). (ii) The objectives differ: the BNN's network is scored on 1{,}000
 held-out points over three training draws, NPE on 20\% of one draw (10 points at $n=50$).
 
 \textbf{Shared by all BNNs.} $100\to16\to16\to16\to5$, soft-sign, $d=2{,}245$. Pretraining: AdamW at the per-size
@@ -1592,7 +1671,8 @@ learning rate and weight decay of Table~\ref{tab:hp}, full batch, 80/20 split, v
 patience 5 evaluations ($\Delta>10^{-4}$), at least 500 and at most 2{,}000 steps, best checkpoint kept.
 MILE: 50{,}000 warmup steps (phases I--III $40{,}000/5{,}000/5{,}000$), EEVPD target $0.5\to0.1$, ESS target 100,
 initial step size equal to the learning rate; 10{,}000 sampling steps thinned by 10 to 1{,}000 kept draws per
-member; $K=12$ members; up to 3 re-seeded attempts to replace non-finite members. Gaussian
+member; $K=12$ members; under stock MILE, at most three attempts in all (the original seed and two re-seeds) to
+replace non-finite members. Gaussian
 predictor and NPE: Sections~\ref{sec:gauss} and~\ref{sec:npe}.
 
 \begin{table}[h]
@@ -1630,7 +1710,8 @@ over every evaluated point, with no filter on mixing.
 
 The gain over $T=1$ at the chosen $T$ is 0.08, 0.20, 0.21 and 0.11 nats on validation at $n=50$, 100, 500 and
 1{,}000; in the final 12-member runs on the test set it is 0.06, 0.10, 0.25 and 0.15 nats. At $n\le100$ the
-validation NLL is flat to within the repeat spread between $T=0.6$ and $0.8$, and every evaluated $T$ mixes. At
+validation NLL is flat to within the repeat spread between $T=0.6$ and $0.8$, and almost every evaluated $T$ mixes (one repeat at $n=100$, $T=0.9$, has a
+maximum split-$\widehat R$ of 1.53). At
 $n=500$ and $1{,}000$ the minimum lies next to a mixing failure: at $n=500$, $T=0.5$ has $\widehat R$ 2.9--10.3 and
 $T=0.4$ diverges (validation NLL $+598$, $\widehat R\approx100$); at $n=1{,}000$, $T=0.6$ has $\widehat R$ 1.9--6.8
 and a higher mean NLL than $T=0.7$ ($-1.67$ against $-1.91$): its two worst-mixed repeats ($\widehat R$ 5.2, 6.8)
@@ -1669,10 +1750,11 @@ its own vertical scale. Each panel's title gives the chosen $T$ and its mean gai
   evaluations without improvement ($>10^{-4}$), never before step 500, and cap at 2{,}000 steps; full-batch,
   80/20 split of the training set. AdamW replaces \code{bde}'s Adam, which ignored weight decay. Learning rate
   and weight decay are tuned per size (Section~\ref{sec:hp}).
-\item \textbf{Member retry.} Members whose chains become non-finite are discarded and the ensemble is refilled
-  from up to three re-seeded attempts on the same training set, until $K$ finite members exist; the failure
-  rate is recorded.
-\item \textbf{Tempering} (Section~\ref{sec:bnn_temp}): $\log p(\boldsymbol\theta)+\log p(\mathcal{D}\mid\boldsymbol\theta)/T$
+\item \textbf{Member retry} (stock MILE). Members whose chains become non-finite are discarded; the whole ensemble
+  is refitted with a new seed on the same training rows, and finite members are pooled across attempts until $K$
+  exist, for at most three attempts in all; the failure rate is recorded. The re-tuning loop has no retry: a
+  non-finite member is dropped (Section~\ref{sec:convdiag}).
+\item \textbf{Tempering} (Section~\ref{sec:bnn_temp}): $\log p(\mathbf w)+\log p(\mathcal{D}\mid\mathbf w)/T$
   in warmup and sampling; pretraining is untouched.
 \item \textbf{Periodic re-tuning} (optional; Appendix~\ref{sec:retune}): after every 100 kept draws (1{,}000
   steps) the chain re-estimates $\epsilon$ (200 steps) and $L$ (50 steps) at the final EEVPD target 0.1, starting
@@ -1702,7 +1784,7 @@ not modified.
   \code{two\_d\_labels=True}; otherwise \code{bde.data.utils.validate\_fit\_data} treats a two-column target as a
   column vector and keeps only the first column, without an error.
 \end{enumerate}
-\textbf{The MRO pitfall.} Overriding \code{\_fit} instead of \code{fit} does nothing: \code{BdeRegressor.fit} calls
+\textbf{The method-resolution-order (MRO) pitfall.} Overriding \code{\_fit} instead of \code{fit} does nothing: \code{BdeRegressor.fit} calls
 \code{super().\_fit}, and that \code{super()} is bound to \code{BdeRegressor}, so it resolves to \code{Bde.\_fit}
 whatever a subclass defines. The first implementation did this and failed with ``\code{BivariateGaussianNLL} not
 allowed for task regression''.
@@ -1721,30 +1803,30 @@ log-posterior. All rely on undocumented \code{bde} internals and are tied to ver
 \label{app:bg}
 \subsection{Microcanonical Langevin Monte Carlo}
 \label{sec:mclmc}
-MCLMC \citep{robnik2024mclmc} samples a target $p(\boldsymbol\theta\mid\mathcal{D})$ on $\mathbb{R}^d$ with a
+MCLMC \citep{robnik2024mclmc} samples a target $p(\mathbf w\mid\mathcal{D})$ on $\mathbb{R}^d$ with a
 unit-speed velocity $\mathbf{u}$ ($\lVert\mathbf{u}\rVert=1$) and the dynamics, in the form used by
 \citet{sommer2025mile},
 \begin{equation}
 \label{eq:mclmc}
-\mathrm{d}\boldsymbol\theta=\mathbf{u}\,\mathrm{d}t,\qquad
-\mathrm{d}\mathbf{u}=\big(I-\mathbf{u}\mathbf{u}^\top\big)\Big(\tfrac{1}{d-1}\nabla\log p(\boldsymbol\theta\mid\mathcal{D})\,\mathrm{d}t
-+\eta\,\mathrm{d}\mathbf{W}\Big).
+\mathrm{d}\mathbf w=\mathbf{u}\,\mathrm{d}t,\qquad
+\mathrm{d}\mathbf{u}=\big(I-\mathbf{u}\mathbf{u}^\top\big)\Big(\tfrac{1}{d-1}\nabla\log p(\mathbf w\mid\mathcal{D})\,\mathrm{d}t
++\xi\,\mathrm{d}\mathbf{W}\Big).
 \end{equation}
-The stationary distribution of $\boldsymbol\theta$ is the target for any noise level $\eta$, including the
-deterministic dynamics $\eta=0$ \citep{robnik2024mclmc}; the noise only decorrelates the velocity, over a
+The stationary distribution of $\mathbf w$ is the target for any noise level $\xi$, including the
+deterministic dynamics $\xi=0$ \citep{robnik2024mclmc}; the noise only decorrelates the velocity, over a
 length $L$. In practice the deterministic part is integrated with the minimal-norm integrator (two gradient
 evaluations per step of size $\epsilon$), and the noise is applied as a partial refresh of the velocity
 \citep{robnik2024mclmc},
 \begin{equation}
-\mathbf{u}\leftarrow\frac{\mathbf{u}+\nu\mathbf{z}}{\lVert\mathbf{u}+\nu\mathbf{z}\rVert},\qquad
-\mathbf{z}\sim\mathcal{N}(0,I),\qquad \nu=\sqrt{\big(e^{2\epsilon/L}-1\big)/d},
+\mathbf{u}\leftarrow\frac{\mathbf{u}+\omega\mathbf{z}}{\lVert\mathbf{u}+\omega\mathbf{z}\rVert},\qquad
+\mathbf{z}\sim\mathcal{N}(0,I),\qquad \omega=\sqrt{\big(e^{2\epsilon/L}-1\big)/d},
 \end{equation}
-with $\nu$ as implemented in BlackJAX \citep{cabezas2024blackjax}. There is no Metropolis--Hastings
+with $\omega$ as implemented in BlackJAX \citep{cabezas2024blackjax}. There is no Metropolis--Hastings
 correction, so a finite $\epsilon$ biases the stationary distribution. The bias is controlled by tuning
 $\epsilon$ to a target energy-error variance per dimension (EEVPD), $\mathrm{Var}[\Delta E]/d$
 \citep{robnik2023mchmc}; the BlackJAX update uses $\mathrm{Var}[\Delta E]\propto\epsilon^6$. Tuning
 proceeds in three phases \citep{sommer2025mile}: (I) adapt $\epsilon$ to the target EEVPD while burning
-in; (II) set $L=\big(\sum_i\mathrm{Var}[\theta_i]\big)^{1/2}$ from the chain's own variance; (III) refine
+in; (II) set $L=\big(\sum_i\mathrm{Var}[w_i]\big)^{1/2}$ from the chain's own variance; (III) refine
 $L=c\,\epsilon\,N/\widehat{\mathrm{ESS}}$ from the effective sample size of $N$ further steps
 ($c=0.4$ in the implementation used here).
 
@@ -1811,7 +1893,9 @@ single scale $\tau$ for which the prior predictive's coverage of the simulator's
 (Section~\ref{sec:bnn_datafree}). Both routes fit the prior predictive to the simulator's joint distribution of
 $(\theta,S)$, one through the evidence of the training sample and one through coverage without data. In a
 well-specified model they should therefore select the same scale at every $n$, and a scale that drifts with $n$
-indicates that no single prior of this family reproduces the simulator. This is our expectation rather than a
+indicates that no single prior of this family reproduces the simulator. Agreement at some $n$ therefore shows that the
+scale is right for this family, not that the family is right: an isotropic Gaussian with the correct scale can still be
+the wrong form of prior. This is our expectation rather than a
 published result; Appendices~\ref{app:eb} and~\ref{sec:res_scale} test it.
 
 \section{Reference posterior and NLL details}
@@ -1834,7 +1918,7 @@ decimals).
 density on $\theta$ in original units, evaluated exactly at $\theta^\ast_j$:
 \begin{itemize}
 \item \emph{Gaussian predictor}: the equal-weight mixture of its 12 networks' Gaussians (one Gaussian for a single
-  network), each from Eq.~\eqref{eq:biv} ($\kappa=1$) after mapping the network's outputs back to original units as for
+  network), each from Eq.~\eqref{eq:biv} after mapping the network's outputs back to original units as for
   the BNN below; for one Gaussian,
   $-\log q=\log(2\pi)+\log s_\sigma+\log s_\rho+\tfrac12\log(1-r^2)+\tfrac{1}{2(1-r^2)}\big(z_\sigma^2+z_\rho^2-2rz_\sigma z_\rho\big)$
   with $z_p=(\theta_p-\mu_p)/s_p$.
@@ -1842,11 +1926,11 @@ density on $\theta$ in original units, evaluated exactly at $\theta^\ast_j$:
   \begin{equation}
   q(\theta\mid S)=\frac{1}{KS}\sum_{k=1}^{K}\sum_{s=1}^{S}\mathcal{N}_2\big(\theta;\,\boldsymbol\mu_{ks}(S),\,\Sigma_{ks}(S)\big),
   \end{equation}
-  each component from Eq.~\eqref{eq:biv} ($\kappa=1$) after mapping the draw's outputs back to original units
+  each component from Eq.~\eqref{eq:biv} after mapping the draw's outputs back to original units
   ($\boldsymbol\mu\mapsto\boldsymbol\mu\odot\mathbf s_y+\mathbf m_y$, $s_\bullet\mapsto s_\bullet s_{y,\bullet}$, $r$
   unchanged), so no Jacobian term arises. Evaluated as $\operatorname{logsumexp}$ over components minus $\log(KS)$.
-\item \emph{NPE}: by change of variables, $\log q_\phi(\theta\mid S)=\log\mathcal{N}\big(T(\theta);0,I_2\big)+
-  \log\lvert\det\partial T/\partial\theta\rvert$, where $T$ maps $\theta$ to the base variable through two masked
+\item \emph{NPE}: by change of variables, $\log q_\phi(\theta\mid S)=\log\mathcal{N}\big(\Psi(\theta);0,I_2\big)+
+  \log\lvert\det\partial \Psi/\partial\theta\rvert$, where $\Psi$ maps $\theta$ to the base variable through two masked
   affine autoregressive layers, each followed by an order reversal (Jacobian determinant 1). Each layer sets
   $y_i=a_i x_i+b_i$, with $a_i=\mathrm{softplus}(\cdot)+10^{-3}$ and $b_i$ functions of $x_{<i}$ and $g(S)$,
   contributing $\sum_i\log a_i$.
@@ -1872,15 +1956,15 @@ methods and, from the earlier runs, two checks of the evidence's fixed point.
 Both models replace $\mathcal{N}(0,1)$ by an isotropic $\mathcal{N}(0,\tau^2)$ (Section~\ref{sec:bg_eb}).
 
 \emph{Data-free width.} $\tau=0.3655$, chosen before any training by Gaussian-process Bayesian optimization of
-$|\text{coverage AUC}|$ of the prior predictive: weights drawn from $\mathcal{N}(0,\tau^2)$, the untrained network's predictive
+$|\text{coverage area}|$ of the prior predictive: weights drawn from $\mathcal{N}(0,\tau^2)$, the untrained network's predictive
 evaluated by TARP (Appendix~\ref{app:moments}) on fresh simulator draws, with inputs standardized by a simulator-drawn
-measurement set and $\theta$ by the prior moments. The width minimizing $|\text{AUC}|$ gives $+0.0037$, against $+0.200$ for
+measurement set and $\theta$ by the prior moments. The width minimizing $|\text{coverage area}|$ gives $+0.0037$, against $+0.200$ for
 $\mathcal{N}(0,1)$. It is a continuous version of the fixed-width sweep of \citet[Fig.~1]{delaunoy2024lowbudget}. Run on stock MILE,
 paired with $\mathcal{N}(0,1)$. At fit time the BNN standardizes with training-set statistics, so at small $n$ the width
 acts in slightly different units from those it was calibrated in.
 
 \emph{Empirical Bayes.} One scale for all weights, updated between blocks inside the re-tune loop
-(Section~\ref{sec:impl}). Each member starts at the RMS of its pretrained weights; the scale is fixed for the
+(Section~\ref{sec:bnn_eb}). Each member starts at the RMS of its pretrained weights; the scale is fixed for the
 one-time warmup and within each 1{,}000-step block. After a block, the target $\tau_{\text{t}}^2=\lVert\mathbf m\rVert^2/\gamma$ of
 Eq.~\eqref{eq:eb_fixed_point} is computed from the block's per-weight mean $\mathbf m$ and variance, with $\gamma$ clamped
 to $[1,d]$; $\log\tau$ moves half-way towards $\log\tau_{\text{t}}$, by at most a factor 2, with a floor of $10^{-3}$, and
@@ -1906,7 +1990,7 @@ $n$ & test NLL & paired & width / warranted & RMS aleatoric &&&&& \\
 \begin{tabular}{rHHHH>{\hspace{2\tabcolsep}}ccccc}
 \toprule
 \multicolumn{10}{l}{\textit{(b) empirical Bayes vs.\ $\mathcal{N}(0,1)$ + re-tune}} \\
-$n$ &&&&& test NLL & paired & width / warranted & RMS aleatoric & EB scale \\
+$n$ &&&&& test NLL & paired & width / warranted & RMS aleatoric & empirical-Bayes scale \\
  &&&&& & difference & $\sigma$/$\rho$ & $\sigma$/$\rho$ & median (at floor) \\
 \midrule
 \inputrows{tables/results4_scale.tex}
@@ -1915,7 +1999,7 @@ $n$ &&&&& test NLL & paired & width / warranted & RMS aleatoric & EB scale \\
 \end{adjustbox}
 \caption{Prior-scale models against their controls ($\to$: control, then model; means over 5 repeats). Paired difference: model
 minus control ($k$/5: model better). Bold: the better of each pair (both if within the sd of their paired difference); width
-/ warranted closer to 1, RMS aleatoric closer to the exact sd (0.153 / 0.054). EB scale: median final scale over 15 members
+/ warranted closer to 1, RMS aleatoric closer to the exact sd (0.153 / 0.054). Empirical-Bayes scale: median final scale over 15 members
 (5 repeats $\times$ 3), with the number at the $10^{-3}$ floor ($<0.01$).}
 \label{tab:res4_scale}
 \end{table}
@@ -1924,8 +2008,12 @@ minus control ($k$/5: model better). Bold: the better of each pair (both if with
 \item \textbf{Empirical Bayes recovers the data-free width at $n=100$--$1{,}000$.} The median final scale is 0.378, 0.350 and
   0.324 (ranges 0.32--0.39, 0.34--0.36, 0.31--0.33), within 11\% of 0.3655. Two independent checks place the evidence's
   fixed point within $\sim$10\% of 0.3655 at these sizes: the zero-data one-point evidence peaks at 0.3655 in 5/5 repeats,
-  and fixed-width chains satisfy the stationarity condition of Eq.~\eqref{eq:eb_fixed_point} at 0.382, 0.373 and 0.400. As
-  expected for a well-specified prior family (Section~\ref{sec:bg_eb}), the data-chosen and the data-free scales agree.
+  and fixed-width chains satisfy the stationarity condition of Eq.~\eqref{eq:eb_fixed_point} at 0.382, 0.373 and 0.400. The
+  data-chosen and the data-free scales therefore agree, so the scale is well specified: for an isotropic Gaussian
+  prior on this task the right scale is about 0.37, not MILE's default of 1 (Section~\ref{sec:bg_eb}). This does not
+  make the isotropic Gaussian form well specified. The empirical-Bayes scale drifts at larger $n$ (0.32 and 0.28 at
+  $n=5{,}000$ and $10{,}000$ in the final runs, Appendix~\ref{app:eb}), and at intermediate $n$, where the form rather
+  than the scale dominates, tempering gains more than the correct scale does (Section~\ref{sec:disc_adjust}).
 \end{itemize}
 
 \subsection{Prior shape, and our claim on priors versus tempering}
@@ -1934,7 +2022,7 @@ $\nzo$ is replaced by a Student-$t$ with $\nu=4$ and scale $s=1/\sqrt2$ on every
 chain budget, seeds, subsamples and hyperparameters. Its variance $s^2\nu/(\nu-2)=1$ equals that of $\nzo$, so the
 pair differs in tail shape only. It is the marginal of $w\mid\tau^2\sim\mathcal N(0,\tau^2)$,
 $\tau^2\sim\text{Inv-Gamma}(2,1)$, the weight prior of the Gibbs variants (Appendix~\ref{sec:res_other}). Heavy tails are
-also what the pretrained weights show: by AIC a Student-$t$ fits the Adam-pretrained weights better than a Laplace or a
+also what the pretrained weights show: by the Akaike information criterion (AIC) a Student-$t$ fits the AdamW-pretrained weights better than a Laplace or a
 Gaussian at $n=100$ and $n=10{,}000$ (fitted $\nu=3.4$ and $3.0$).
 
 \begin{table}[h]
@@ -2064,10 +2152,10 @@ $\tau_{\max}\Phi(u)$ was first evaluated on wrongly reconstructed weights (Appen
 
 \textbf{Optimized per-weight prior} \citep{delaunoy2024lowbudget} (\code{legacy/optimize\_prior.py}). Per-weight
 Gaussian $(\mu_j,\sigma_j)$ optimized for zero-data coverage. Each estimator fix improved the objective and worsened
-the fit (single runs, $n=100$): mean prior scale 1.00 / 0.150 / 0.141, coverage AUC 0.0328 / 0.0126 / 0.0109, test NLL
-$-0.772$ / $-0.615$ / $-0.503$; the best AUC never reached the isotropic data-free width's 0.0037. Deviations from the
+the fit (single runs, $n=100$): mean prior scale 1.00 / 0.150 / 0.141, coverage area 0.0328 / 0.0126 / 0.0109, test NLL
+$-0.772$ / $-0.615$ / $-0.503$; the best coverage area never reached the isotropic data-free width's 0.0037. Deviations from the
 paper: its kernel-amplitude rule assumes a uniform parameter prior (ours is a truncated normal), and its kernel has a
-per-feature lengthscale with $1/N$ averaging (ours does not).
+per-feature length scale with $1/N$ averaging (ours does not).
 
 \textbf{Per-step empirical Bayes} (\code{bnn\_ebstep\_10k}, \code{bnn\_ebstep\_retune\_10k}). The scale is reset to
 its fixed point after every chain step. Against $\nzo$ + re-tune: $n=50$ NLL $+0.84\pm0.41$ (0/5, members blow up);
@@ -2094,15 +2182,16 @@ chains started in different modes need not reach a common function: $\widehat R$
 parameters, which is not given in BNNs'', and a function-space metric ``should not penalize these chain-wise
 differences'' \citep[Sec.~6.2]{sommer2024connecting}. \citet{papamarkou2022challenges} show that a non-converged
 chain can still yield ``a valuable posterior predictive distribution''. Accordingly, \citet{izmailov2021bnn} judge
-HMC by $\widehat R$ on test-set predictions with a 1.1 threshold (met by 91\% / 98\% of predictions on CIFAR-10 /
+HMC by $\widehat R$ on test-set predictions with a 1.1 threshold (met by 91\% / 98\% of predictions on the CIFAR-10 image /
 IMDB, while some weights have very large $\widehat R$), and MILE itself claims no convergence, reports a
 chain-wise $\widehat R$ on the weights above both the 1.1 and 1.01 cutoffs, and is justified by predictive
 performance \citep[App.~A.3]{sommer2025mile}.
 
 We follow this practice: diagnostics are reported, never used to accept or discard a fit (only members with
-non-finite draws are replaced, Section~\ref{sec:impl}). The primary criterion is agreement of the predictive with
-the exact posterior (Section~\ref{sec:metrics}), a direct check of what the diagnostics only proxy, available here
-because the reference is exact. Diagnostics are computed on predictive quantities only, never on raw weights.
+non-finite draws are removed, Section~\ref{sec:convdiag}). Fits are judged mainly by their test NLL at $\theta^\ast$
+(Section~\ref{sec:metrics}) and, in Appendices~\ref{app:width} and~\ref{app:moments}, by the agreement of the
+predictive with the exact posterior, a direct check of what the diagnostics only proxy, available here because the
+reference is exact. Diagnostics are computed on predictive quantities only, never on raw weights.
 
 \textbf{What is computed.}
 \begin{itemize}
@@ -2160,27 +2249,20 @@ members.}
 \item \textbf{It does not see the width.} Pooled $\widehat R$ on $s$ is at least that on $\mu$ in every row. Data-free
   scale at $n=50$ / 100: $\mu$ passes at 87\% / 83\% of pairs pooled, $s$ at 35\% / 38\%, while chain-wise both pass at
   $\ge99\%$. Each member is stationary; the members settle on different widths, and their LPPDs differ by 0.15 / 0.18
-  nats. $\nzo$ at $n=500$: pooled median 1.008 on $\mu$, $s$ passes at 1\%, member LPPD spread 0.34 nats. The same holds
-  on a GP regression task (separate note), where members that agree on the mean differ by up to 60\% in predicted
-  noise width.
+  nats. $\nzo$ at $n=500$: pooled median 1.008 on $\mu$, $s$ passes at 1\%, member LPPD spread 0.34 nats.
 \item \textbf{At large $n$ it fails, and the members do disagree.} $\nzo$ at $n=10{,}000$: pipeline $\max\widehat R$
   4.90--6.57, pooled median 1.68 on $\mu$, chain-wise 1.16 (3\% of pairs $\le1.01$). Each chain is nearly stationary in
   LPPD (largest change over its last 10\%: 0.004 nats), but the 12 members differ by 0.13 nats and pooling them gains
-  0.07: members settle in different predictive solutions, and single chains do not mix within them. On the GP task the
-  same statistics fail while members agree to 0.011 nats, the situation \citet[Sec.~6.2]{sommer2024connecting}
-  describe; here they do not. The test NLL is nonetheless stable across repeats ($-2.284\pm0.005$).
+  0.07: members settle in different predictive solutions, and single chains do not mix within them. The test NLL is nonetheless stable across repeats ($-2.284\pm0.005$).
 \item \textbf{Tempering.} At the selected temperatures the tempered BNN's members differ by 0.20 and 0.37 nats at
   $n=50$ and 100 ($\nzo$: 0.29 and 0.46), with pipeline $\max\widehat R$ 1.02--1.13. At $n=500$ and $1{,}000$, where its
   temperature sits next to the mixing failure of Appendix~\ref{app:temp_search}, its chain-wise $\widehat R$ on $\mu$ is
   higher than that of $\nzo$ (1.027 and 1.030 against 1.006 and 1.011), with 26\% and 23\% of test datasets at or below
   1.01 against 70\% and 50\%.
-\item \textbf{Stationary is not converged.} GP task, $T=0.6$ without re-tune, $n=100$: chain-wise $\widehat R$ on $s$ is
-  about 1.00 at 1, 4 and 16 times the sampling budget, while the test NLL moves $-0.073\to-0.090\to-0.131$ towards the
-  re-tuned value ($-0.49$).
 \end{itemize}
 A pooled $\widehat R$ on the mean of at most 1.01 therefore neither certifies a fit nor, above it, rejects one. We
-report the diagnostics of Table~\ref{tab:res5} alongside each result and judge fits by their agreement with the exact
-posterior (Section~\ref{sec:convdiag}).
+report the diagnostics of Table~\ref{tab:res5} alongside each result and judge fits by their test NLL and their
+agreement with the exact posterior (Section~\ref{sec:convdiag}).
 
 \subsection{Periodic re-tuning of MILE's step size and \texorpdfstring{$L$}{L}}
 \label{sec:retune}
@@ -2191,11 +2273,10 @@ re-tune of Section~\ref{sec:impl} re-estimates both every 1{,}000 steps.
 \begin{itemize}
 \item \textbf{The warmup's values are far from where the re-tune settles.} $\nzo$, median over members: $L$ falls to
   0.27--0.36 of its warmup value at $n\le1{,}000$ and rises 1.7-fold and 6.1-fold at $n=5{,}000$ and 10{,}000; $\epsilon$
-  falls to 0.68--0.96 of it (earlier runs). On the GP task at $n=10{,}000$ the warmup's $L$ was 15--30 times shorter than the re-tuned one.
+  falls to 0.68--0.96 of it (earlier runs).
 \item \textbf{Fit.} Test NLL $-0.150\pm0.042$ at $n=500$ and $-0.123\pm0.009$ at $n=1{,}000$ (5/5 each), the size of the
   tempering gain; $-0.039\pm0.037$ at $n=50$ (17/20), a tie at $n=100$ and no difference from $n=5{,}000$
-  (Table~\ref{tab:paired_b}). On the GP task most of tempering's gain
-  at $T=0.6$ needs the re-tune (test NLL $-0.50$ with it, $-0.07$ without; one repeat).
+  (Table~\ref{tab:paired_b}).
 \item \textbf{Mixing: mixed.} In the final runs (Table~\ref{tab:res5}, five fits per size) the re-tune lowers the
   members' LPPD spread on every fit at $n\le1{,}000$ (0.05--0.22 against 0.11--0.69 nats) but raises the chain-wise
   $\widehat R$ on $s$ on every fit there (1.020--1.059 against 1.004--1.017). The pipeline's $\max\widehat R$ is lower on
@@ -2204,12 +2285,9 @@ re-tune of Section~\ref{sec:impl} re-estimates both every 1{,}000 steps.
   Appendix~\ref{sec:res_other} (earlier runs) the re-tune meets $\max\widehat R\le1.01$ on 5/5 repeats at $n=50$ and 100,
   against 2/5 and 0/5 without it and 1/5 and 0/5 with 30{,}000 extra plain steps (not all seed-paired); that sampler
   warms up at $\tau=1$ and then samples $\tau$, a mismatch stock MILE does not have.
-\item \textbf{Faster exploration or bias.} GP task, $T=0.6$, $n=100$: with the re-tune the test NLL is $-0.504$ / $-0.485$ /
-  $-0.487$ at 1 / 4 / 16 times the sampling budget and chain-wise $\widehat R$ on $s$ falls from 1.16 to 1.03; without it,
-  $-0.073$ / $-0.090$ / $-0.131$, moving towards the re-tuned value (one repeat). This favours faster exploration over a
-  biased target, but does not establish it: the adaptation continues through the kept draws without a Metropolis
-  correction, and each re-tune's 250 steps also move the chain (2{,}500 extra steps per member, with no step-matched
-  control on stock MILE).
+\item \textbf{Faster exploration or bias.} Whether the re-tune's gain comes from faster exploration or from a biased
+  target is not established: the adaptation continues through the kept draws without a Metropolis correction, and each
+  re-tune's 250 steps also move the chain (2{,}500 extra steps per member, with no step-matched control on stock MILE).
 \end{itemize}
 
 \section{Negative results and pipeline bugs}
@@ -2238,6 +2316,5 @@ re-tune of Section~\ref{sec:impl} re-estimates both every 1{,}000 steps.
 \item \textbf{R-hat description.} The pipeline's $\widehat R$ was described as split, rank-normalized; it is the classic PSRF
   (Section~\ref{sec:convdiag}).
 \end{itemize}
-
 
 \end{document}
